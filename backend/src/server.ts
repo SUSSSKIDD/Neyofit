@@ -21,7 +21,7 @@ import { specs } from '@/config/swagger.config.js';
 import { globalErrorHandler } from '@/middleware/errorHandler';
 import { securityHeaders } from '@/middleware/security';
 import { setupEmailProviders } from '@/config/email/nodemailer/nodemailer.config';
-import { startEmailScheduler } from '@/config/email/scheduler/Neyofit-email-cron';
+import { startEmailScheduler } from '@/config/email/scheduler/neyofit-email-cron';
 import { seedEmailTemplates } from '@/config/email/templates/seedTemplates';
 
 // Load environment variables
