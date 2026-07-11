@@ -79,6 +79,8 @@ class Logger {
     private checkAndRotateLogFile(): void {
         if (!this.logStream || !this.config.enableFile) return;
 
+        if (!fs.existsSync(this.currentLogFile)) return;
+
         const stats = fs.statSync(this.currentLogFile);
         const fileSizeInMB = stats.size / (1024 * 1024);
 
