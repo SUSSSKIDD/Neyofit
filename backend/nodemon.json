@@ -1,0 +1,25 @@
+{
+    "watch": [
+        "src"
+    ],
+    "ext": "ts,js,json",
+    "ignore": [
+        "src/**/*.spec.ts",
+        "src/**/*.test.ts",
+        "dist",
+        "node_modules"
+    ],
+    "exec": "tsx --tsconfig tsconfig.json src/server.ts",
+    "env": {
+        "NODE_ENV": "development"
+    },
+    "delay": "1000",
+    "verbose": true,
+    "legacyWatch": true,
+    "restartable": "rs",
+    "colours": true,
+    "events": {
+        "restart": "echo '🔄 Server restarted due to changes'",
+        "crash": "echo '💥 Server crashed, restarting...'"
+    }
+}

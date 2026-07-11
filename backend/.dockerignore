@@ -1,0 +1,13 @@
+# This file specifies which files and directories should be ignored when building the Docker image.
+
+node_modules
+dist
+*.log
+.DS_Store
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+coverage
+.vscode
+.idea
+*.tsbuildinfo

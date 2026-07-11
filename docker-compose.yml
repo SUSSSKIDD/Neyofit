@@ -1,0 +1,68 @@
+version: "3.9"
+
+services:
+  # --- BLUE ENVIRONMENT ---
+  backend-blue:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: neyofit-backend-blue
+    restart: always
+    ports:
+      - "8905:5000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - /srv/projects/pratyush/neyofit/uploads:/app/uploads
+    networks:
+      - neyofit-docker-net
+
+  frontend-blue:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: neyofit-frontend-blue
+    restart: always
+    ports:
+      - "8906:3000"
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend-blue
+    networks:
+      - neyofit-docker-net
+
+  # --- GREEN ENVIRONMENT ---
+  backend-green:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: neyofit-backend-green
+    restart: always
+    ports:
+      - "8915:5000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - /srv/projects/pratyush/neyofit/uploads:/app/uploads
+    networks:
+      - neyofit-docker-net
+
+  frontend-green:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: neyofit-frontend-green
+    restart: always
+    ports:
+      - "8916:3000"
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend-green
+    networks:
+      - neyofit-docker-net
+
+networks:
+  neyofit-docker-net:
+    external: true
