@@ -1,3 +1,5 @@
+import withSerwistInit from "@serwist/next";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -10,6 +12,11 @@ const nextConfig = {
     unoptimized: true,
   },
   output: 'standalone',
-}
+};
 
-export default nextConfig
+const withSerwist = withSerwistInit({
+  swSrc: "app/sw.ts",
+  swDest: "public/sw.js",
+});
+
+export default withSerwist(nextConfig);

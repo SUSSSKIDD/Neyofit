@@ -5,10 +5,24 @@ import './globals.css'
 import { AuthProvider } from '@/contexts/auth-context'
 import { GoogleMapsProvider } from '@/components/google-maps-provider'
 
+export const viewport = {
+  themeColor: '#000000',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
 export const metadata: Metadata = {
   title: 'Welcome to Neyofit',
   description: 'Welcome to Neyofit',
   generator: 'Neyofit',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Neyofit',
+  },
 }
 
 export default function RootLayout({
