@@ -7,3 +7,11 @@ uploads/
 ehthumbs.db
 Thumbs.db
 .env
+# Added by code-review-graph
+.code-review-graph/
+.mcp.json
+.opencode.json
+.claude/
+.cursor/
+GEMINI.md
+CLAUDE.md
