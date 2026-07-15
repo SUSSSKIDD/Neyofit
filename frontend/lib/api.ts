@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || (process.env.NODE_ENV === "production" ? "http://api.neyofit.in/api/v1" : "http://localhost:5001/api/v1");
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || (process.env.NODE_ENV === "production" ? "https://api.neyofit.in/api/v1" : "http://localhost:5001/api/v1");
 
 // Utility function to generate unique IDs for time slots
 export const generateSlotId = (): string => {
@@ -90,6 +90,9 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  isEmailVerified?: boolean;
+  userAvatar?: string;
+  lastLogin?: string;
 }
 
 export interface Location {
@@ -106,25 +109,22 @@ export interface Location {
     type: string;
     coordinates: [number, number];
   };
-  isAllocated?: boolean; // Whether this location is allocated to a gym
+  isAllocated?: boolean;
 }
 
-// Time slot interface for individual slots
 export interface TimeSlot {
   id: string;
-  name: string; // e.g., "Morning", "Evening", "Afternoon", "Pre-Morning"
-  startTime: string; // HH:MM format
-  endTime: string; // HH:MM format
+  name: string;
+  startTime: string;
+  endTime: string;
   isActive: boolean;
 }
 
-// Day schedule interface
 export interface DaySchedule {
   isClosed: boolean;
   slots: TimeSlot[];
 }
 
-// Opening hours interface with dynamic slots
 export interface OpeningHours {
   monday: DaySchedule;
   tuesday: DaySchedule;
@@ -164,7 +164,7 @@ export interface SubscriptionListing {
   name: string;
   description?: string;
   type: "daily" | "weekly" | "monthly" | "yearly" | "custom";
-  customTypeText?: string; // Custom text when type is 'custom'
+  customTypeText?: string;
   durationInDays: number;
   gymId: string;
   cost: number;
@@ -248,7 +248,6 @@ export interface UserPayment {
       };
     };
   };
-  // Commission fields
   commissionRate?: number;
   commissionAmount?: number;
   gymOwnerShare?: number;
@@ -456,177 +455,96 @@ export interface RevenueSummary {
 }
 
 class ApiService {
-  // Delete a subscription listing
-  async deleteSubscriptionListing(
-    id: string
-  ): Promise<ApiResponse<{ message: string }>> {
-    const response = await fetch(
-      `${this.baseURL}/subscription-listings/${id}`,
-      {
-        method: "DELETE",
-        headers: this.getHeaders(),
-      }
-    );
-    return response.json();
-  }
-  // Update a subscription listing
-  async updateSubscriptionListing(
-    id: string,
-    data: Partial<SubscriptionListing>
-  ): Promise<ApiResponse<SubscriptionListing>> {
-    const response = await fetch(
-      `${this.baseURL}/subscription-listings/${id}`,
-      {
-        method: "PUT",
-        headers: this.getHeaders(),
-        body: JSON.stringify(data),
-      }
-    );
-    return response.json();
-  }
-  // Create a new subscription listing
-  async createSubscriptionListing(subscriptionData: {
-    name: string;
-    description?: string;
-    type: string;
-    customTypeText?: string;
-    durationInDays: number;
-    gymId: string;
-    cost: number;
-    currency: string;
-    discount?: {
-      amount: number;
-      type: string;
-      validUntil?: string;
-    };
-    isActive?: boolean;
-    isRecurring?: boolean;
-    features?: string[];
-    startDate?: string;
-    endDate?: string;
-  }): Promise<{ success: boolean; created?: SubscriptionListing; error?: string }> {
-    const response = await fetch(`${this.baseURL}/subscription-listings`, {
-      method: "POST",
-      headers: this.getHeaders(),
-      body: JSON.stringify(subscriptionData),
-    });
-    return response.json();
-  }
-
-  // Link a subscription listing to a gym
-  async linkSubscriptionToGym(
-    gymId: string,
-    subscriptionListingId: string
-  ): Promise<ApiResponse<{ message: string }>> {
-    const response = await fetch(
-      `${this.baseURL}/gyms/${gymId}/subscription-listings`,
-      {
-        method: "POST",
-        headers: this.getHeaders(),
-        body: JSON.stringify({ subscriptionListingId }),
-      }
-    );
-    return response.json();
-  }
-
-  // Gym Slots API methods
-  async createOrUpdateGymSlots(
-    gymId: string,
-    dayOfWeek: string,
-    slots: TimeSlot[],
-    isClosed: boolean
-  ): Promise<ApiResponse<GymSlotData>> {
-    const response = await fetch(`${this.baseURL}/gym-slots/${gymId}`, {
-      method: "POST",
-      headers: this.getHeaders(),
-      body: JSON.stringify({ dayOfWeek, slots, isClosed }),
-    });
-    return response.json();
-  }
-
-  async getGymSlots(gymId: string): Promise<ApiResponse<GymSlotData[]>> {
-    const response = await fetch(`${this.baseURL}/gym-slots/${gymId}`, {
-      method: "GET",
-      headers: this.getHeaders(),
-    });
-    return response.json();
-  }
-
-  async updateGymSlot(
-    gymId: string,
-    dayOfWeek: string,
-    slots: TimeSlot[],
-    isClosed: boolean
-  ): Promise<ApiResponse<GymSlotData>> {
-    const response = await fetch(
-      `${this.baseURL}/gym-slots/${gymId}/${dayOfWeek}`,
-      {
-        method: "PUT",
-        headers: this.getHeaders(),
-        body: JSON.stringify({ slots, isClosed }),
-      }
-    );
-    return response.json();
-  }
-
-  async deleteGymSlot(
-    gymId: string,
-    dayOfWeek: string
-  ): Promise<ApiResponse<{ message: string }>> {
-    const response = await fetch(
-      `${this.baseURL}/gym-slots/${gymId}/${dayOfWeek}`,
-      {
-        method: "DELETE",
-        headers: this.getHeaders(),
-      }
-    );
-    return response.json();
-  }
-  // Subscribe to a plan
-  async subscribeToPlan(
-    subscriptionListingId: string,
-    isRecurring?: boolean
-  ): Promise<ApiResponse<UserSubscription>> {
-    const response = await fetch(`${this.baseURL}/subscriptions`, {
-      method: "POST",
-      headers: this.getHeaders(),
-      body: JSON.stringify({ subscriptionListingId }),
-    });
-    return response.json();
-  }
-  // User Subscription endpoints
-  async getUserSubscriptions(): Promise<ApiResponse<UserSubscription[]>> {
-    const response = await fetch(`${this.baseURL}/subscriptions`, {
-      method: "GET",
-      headers: this.getHeaders(),
-    });
-    return response.json();
-  }
   private baseURL: string;
-  private token: string | null = null;
+  private isRefreshing = false;
+  private failedQueue: Array<{
+    resolve: (value: any) => void;
+    reject: (reason: any) => void;
+  }> = [];
 
   constructor() {
     this.baseURL = API_BASE_URL;
-    this.token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("neyofit_auth_token")
-        : null;
   }
 
-  private getHeaders(): HeadersInit {
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<ApiResponse<T>> {
+    const url = `${this.baseURL}${endpoint}`;
+    
+    const defaultOptions: RequestInit = {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      credentials: 'include', // Important: include cookies
     };
 
-    if (this.token) {
-      headers["Authorization"] = `Bearer ${this.token}`;
-    }
+    try {
+      const response = await fetch(url, defaultOptions);
+      const data = await response.json();
 
-    return headers;
+      // Handle 401 - token expired, try to refresh
+      if (response.status === 401 && !endpoint.includes('/auth/')) {
+        const refreshed = await this.refreshToken();
+        if (refreshed) {
+          // Retry the original request
+          const retryResponse = await fetch(url, defaultOptions);
+          return retryResponse.json();
+        }
+      }
+
+      return data;
+    } catch (error) {
+      console.error(`API request failed: ${endpoint}`, error);
+      throw error;
+    }
   }
 
-  setToken(token: string | null) {
-    this.token = token;
+  private async processQueue(error: Error | null, token: string | null = null) {
+    this.failedQueue.forEach(({ resolve, reject }) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(token);
+      }
+    });
+    this.failedQueue = [];
+  }
+
+  async refreshToken(): Promise<boolean> {
+    if (this.isRefreshing) {
+      // Wait for existing refresh to complete
+      return new Promise((resolve) => {
+        this.failedQueue.push({ resolve, reject: () => {} });
+      });
+    }
+
+    this.isRefreshing = true;
+
+    try {
+      const response = await fetch(`${this.baseURL}/auth/refresh-token`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        this.processQueue(null, 'refreshed');
+        this.isRefreshing = false;
+        return true;
+      } else {
+        this.processQueue(new Error('Token refresh failed'));
+        this.isRefreshing = false;
+        return false;
+      }
+    } catch (error) {
+      this.processQueue(error as Error);
+      this.isRefreshing = false;
+      return false;
+    }
   }
 
   // Auth endpoints
@@ -636,10 +554,11 @@ class ApiService {
     phone: string;
     password: string;
     userType?: string;
-  }): Promise<ApiResponse<{ user: User; token: string }>> {
+  }): Promise<ApiResponse<{ user: User }>> {
     const response = await fetch(`${this.baseURL}/auth/register-user`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify({
         ...userData,
         userType: userData.userType || "customer",
@@ -656,10 +575,11 @@ class ApiService {
   async loginUser(credentials: {
     email: string;
     password: string;
-  }): Promise<ApiResponse<{ user: User; token: string }>> {
+  }): Promise<ApiResponse<{ user: User }>> {
     const response = await fetch(`${this.baseURL}/auth/login-user`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(credentials),
     });
 
@@ -673,18 +593,29 @@ class ApiService {
   async logoutUser(): Promise<void> {
     await fetch(`${this.baseURL}/auth/logout`, {
       method: "POST",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
+  }
+
+  async refreshAccessToken(): Promise<ApiResponse<{ message: string }>> {
+    const response = await fetch(`${this.baseURL}/auth/refresh-token`, {
+      method: "POST",
+      credentials: 'include',
+    });
+    return response.json();
   }
 
   async verifyToken(): Promise<ApiResponse<{ user: User }>> {
     const response = await fetch(`${this.baseURL}/auth/verify-token`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
 
     if (response.status === 401) {
-      this.handleUnauthorized();
+      // Token expired, trigger auth event
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+      }
     }
 
     return response.json();
@@ -693,36 +624,36 @@ class ApiService {
   async forgotPassword(email: string): Promise<ApiResponse<{ message: string }>> {
     const response = await fetch(`${this.baseURL}/auth/forgot-password`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify({ email }),
     });
-
     return response.json();
   }
 
   async resetPassword(token: string, password: string): Promise<ApiResponse<{ message: string }>> {
     const response = await fetch(`${this.baseURL}/auth/reset-password`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify({ token, password }),
     });
-
     return response.json();
   }
 
   async verifyEmailToken(token: string): Promise<ApiResponse<{ message: string }>> {
     const response = await fetch(`${this.baseURL}/auth/verify-email/${token}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
-
     return response.json();
   }
 
   async checkEmail(email: string): Promise<{ success: boolean; exists: boolean; hasPassword: boolean }> {
     const response = await fetch(`${this.baseURL}/auth/check-email`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify({ email }),
     });
     return response.json();
@@ -735,7 +666,8 @@ class ApiService {
   }> {
     const response = await fetch(`${this.baseURL}/auth/send-otp`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify({ email, purpose }),
     });
     return response.json();
@@ -748,10 +680,11 @@ class ApiService {
     name?: string;
     phone?: string;
     password?: string;
-  }): Promise<ApiResponse<{ user: User; token: string }>> {
+  }): Promise<ApiResponse<{ user: User }>> {
     const response = await fetch(`${this.baseURL}/auth/verify-otp`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -760,16 +693,9 @@ class ApiService {
   async sendVerificationEmail(): Promise<ApiResponse<{ message: string }>> {
     const response = await fetch(`${this.baseURL}/auth/send-verification-email`, {
       method: "POST",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
-
     return response.json();
-  }
-
-  private handleUnauthorized() {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
-    }
   }
 
   // Gym endpoints
@@ -793,9 +719,8 @@ class ApiService {
 
     const response = await fetch(`${this.baseURL}/gyms?${queryParams}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
-
     return response.json();
   }
 
@@ -817,10 +742,10 @@ class ApiService {
   }): Promise<ApiResponse<Gym>> {
     const response = await fetch(`${this.baseURL}/gyms`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(gymData),
     });
-
     return response.json();
   }
 
@@ -843,7 +768,8 @@ class ApiService {
   ): Promise<ApiResponse<Gym>> {
     const response = await fetch(`${this.baseURL}/gyms/${id}`, {
       method: "PUT",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(gymData),
     });
 
@@ -858,18 +784,16 @@ class ApiService {
   async deleteGym(id: string): Promise<ApiResponse<{ message: string }>> {
     const response = await fetch(`${this.baseURL}/gyms/${id}`, {
       method: "DELETE",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
-
     return response.json();
   }
 
   async getGymById(id: string): Promise<ApiResponse<Gym>> {
     const response = await fetch(`${this.baseURL}/gyms/${id}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
-
     return response.json();
   }
 
@@ -880,10 +804,9 @@ class ApiService {
       `${this.baseURL}/gyms/${gymId}/subscription-listings`,
       {
         method: "GET",
-        headers: this.getHeaders(),
+        credentials: 'include',
       }
     );
-
     return response.json();
   }
 
@@ -911,9 +834,8 @@ class ApiService {
 
     const response = await fetch(`${this.baseURL}/locations?${queryParams}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
-
     return response.json();
   }
 
@@ -929,14 +851,13 @@ class ApiService {
     latitude: number;
     longitude: number;
   }): Promise<ApiResponse<Location>> {
-    // Backend expects zipCode, not pinCode
     const requestData = {
       name: locationData.name,
       address: {
         street: locationData.address.street,
         city: locationData.address.city,
         state: locationData.address.state,
-        zipCode: locationData.address.pinCode, // Convert pinCode to zipCode
+        zipCode: locationData.address.pinCode,
         country: locationData.address.country,
       },
       latitude: locationData.latitude,
@@ -945,10 +866,10 @@ class ApiService {
 
     const response = await fetch(`${this.baseURL}/locations`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(requestData),
     });
-
     return response.json();
   }
 
@@ -969,19 +890,18 @@ class ApiService {
   ): Promise<ApiResponse<Location>> {
     const response = await fetch(`${this.baseURL}/locations/${id}`, {
       method: "PUT",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(locationData),
     });
-
     return response.json();
   }
 
   async deleteLocation(id: string): Promise<ApiResponse<{ message: string }>> {
     const response = await fetch(`${this.baseURL}/locations/${id}`, {
       method: "DELETE",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
-
     return response.json();
   }
 
@@ -1009,10 +929,9 @@ class ApiService {
       `${this.baseURL}/subscription-listings?${queryParams}`,
       {
         method: "GET",
-        headers: this.getHeaders(),
+        credentials: 'include',
       }
     );
-
     return response.json();
   }
 
@@ -1032,10 +951,9 @@ class ApiService {
       `${this.baseURL}/gym-reviews/gym/${gymId}?${queryParams}`,
       {
         method: "GET",
-        headers: this.getHeaders(),
+        credentials: 'include',
       }
     );
-
     return response.json();
   }
 
@@ -1046,10 +964,10 @@ class ApiService {
   }): Promise<ApiResponse<GymReview>> {
     const response = await fetch(`${this.baseURL}/gym-reviews`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(reviewData),
     });
-
     return response.json();
   }
 
@@ -1064,9 +982,8 @@ class ApiService {
   > {
     const response = await fetch(`${this.baseURL}/health`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
-
     return response.json();
   }
 
@@ -1081,10 +998,10 @@ class ApiService {
   > {
     const response = await fetch(`${this.baseURL}/payments/order`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify({ subscriptionListingId }),
     });
-
     return response.json();
   }
 
@@ -1096,26 +1013,25 @@ class ApiService {
   }): Promise<ApiResponse<PaymentVerifyResult>> {
     const response = await fetch(`${this.baseURL}/payments/verify`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(paymentData),
     });
-
     return response.json();
   }
 
   async getPaymentStatus(orderId: string): Promise<ApiResponse<PaymentStatus>> {
     const response = await fetch(`${this.baseURL}/payments/status/${orderId}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
-
     return response.json();
   }
 
   async getActiveGymPasses(): Promise<ApiResponse<GymPass[]>> {
     const response = await fetch(`${this.baseURL}/payments/gym-passes`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1123,7 +1039,7 @@ class ApiService {
   async getUserPayments(): Promise<ApiResponse<UserPayment[]>> {
     const response = await fetch(`${this.baseURL}/payments/user-payments`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1148,10 +1064,10 @@ class ApiService {
   }> {
     const response = await fetch(`${this.baseURL}/gyms/draft`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(gymData),
     });
-
     return response.json();
   }
 
@@ -1166,7 +1082,8 @@ class ApiService {
   }> {
     const response = await fetch(`${this.baseURL}/gyms/${gymId}/status`, {
       method: "PATCH",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify({ status }),
     });
 
@@ -1190,9 +1107,8 @@ class ApiService {
 
     const response = await fetch(`${this.baseURL}/gyms/status?${queryParams}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
-
     return response.json();
   }
 
@@ -1202,15 +1118,12 @@ class ApiService {
     limit: number = 10
   ): Promise<{ success: boolean; locations?: Location[]; error?: string }> {
     const response = await fetch(
-      `${this.baseURL}/locations/search?q=${encodeURIComponent(
-        query
-      )}&limit=${limit}`,
+      `${this.baseURL}/locations/search?q=${encodeURIComponent(query)}&limit=${limit}`,
       {
         method: "GET",
-        headers: this.getHeaders(),
+        credentials: 'include',
       }
     );
-
     return response.json();
   }
 
@@ -1229,7 +1142,7 @@ class ApiService {
 
     const response = await fetch(`${this.baseURL}/users?${queryParams}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1240,10 +1153,11 @@ class ApiService {
     email: string;
     phone: string;
     password: string;
-  }): Promise<ApiResponse<{ user: User; token: string }>> {
+  }): Promise<ApiResponse<{ user: User }>> {
     const response = await fetch(`${this.baseURL}/auth/register-gym-owner`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1255,7 +1169,7 @@ class ApiService {
       `${this.baseURL}/users/${userId}/toggle-active`,
       {
         method: "PATCH",
-        headers: this.getHeaders(),
+        credentials: 'include',
       }
     );
     return response.json();
@@ -1276,7 +1190,7 @@ class ApiService {
       `${this.baseURL}/payments/all?${queryParams}`,
       {
         method: "GET",
-        headers: this.getHeaders(),
+        credentials: 'include',
       }
     );
     return response.json();
@@ -1286,7 +1200,7 @@ class ApiService {
   async getGymOwnerPayments(): Promise<ApiResponse<UserPayment[]>> {
     const response = await fetch(`${this.baseURL}/payments/gym-owner`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1297,7 +1211,7 @@ class ApiService {
       `${this.baseURL}/gym-reviews/user/${userId}`,
       {
         method: "GET",
-        headers: this.getHeaders(),
+        credentials: 'include',
       }
     );
     return response.json();
@@ -1309,7 +1223,7 @@ class ApiService {
       `${this.baseURL}/gym-reviews/${reviewId}`,
       {
         method: "DELETE",
-        headers: this.getHeaders(),
+        credentials: 'include',
       }
     );
     return response.json();
@@ -1322,7 +1236,8 @@ class ApiService {
   ): Promise<ApiResponse<User>> {
     const response = await fetch(`${this.baseURL}/users/${userId}`, {
       method: "PUT",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1332,7 +1247,7 @@ class ApiService {
   async getSuperAdminDashboard(): Promise<ApiResponse<Record<string, unknown>>> {
     const response = await fetch(`${this.baseURL}/dashboard/superadmin`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1340,7 +1255,7 @@ class ApiService {
   async getGymOwnerDashboard(): Promise<ApiResponse<Record<string, unknown>>> {
     const response = await fetch(`${this.baseURL}/dashboard/gym-owner`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1349,7 +1264,7 @@ class ApiService {
   async getGymFacilities(): Promise<ApiResponse<Array<{ _id: string; name: string; description?: string }>>> {
     const response = await fetch(`${this.baseURL}/gym-facilities`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1360,7 +1275,8 @@ class ApiService {
   }): Promise<ApiResponse<{ _id: string; name: string; description?: string }>> {
     const response = await fetch(`${this.baseURL}/gym-facilities`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1369,7 +1285,7 @@ class ApiService {
   async deleteGymFacility(id: string): Promise<ApiResponse<{ message: string }>> {
     const response = await fetch(`${this.baseURL}/gym-facilities/${id}`, {
       method: "DELETE",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1377,7 +1293,8 @@ class ApiService {
   async updateGymFacility(id: string, data: { name: string }): Promise<ApiResponse<{ _id: string; name: string }>> {
     const response = await fetch(`${this.baseURL}/gym-facilities/${id}`, {
       method: "PUT",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1395,7 +1312,7 @@ class ApiService {
   }>>> {
     const response = await fetch(`${this.baseURL}/payments/payout-summary`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1403,7 +1320,7 @@ class ApiService {
   async deleteUser(userId: string): Promise<ApiResponse<{ message: string }>> {
     const response = await fetch(`${this.baseURL}/users/${userId}`, {
       method: "DELETE",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1412,7 +1329,7 @@ class ApiService {
   async getGymPictures(gymId: string): Promise<ApiResponse<Array<{ _id: string; gymId: string; filePath: string; fileName: string; isCover?: boolean }>>> {
     const response = await fetch(`${this.baseURL}/gym-pictures/gym/${gymId}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1420,7 +1337,7 @@ class ApiService {
   async deleteGymPicture(id: string): Promise<ApiResponse<{ message: string }>> {
     const response = await fetch(`${this.baseURL}/gym-pictures/${id}`, {
       method: "DELETE",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1449,9 +1366,7 @@ class ApiService {
 
     const response = await fetch(`${this.baseURL}/gym-pictures/bulk`, {
       method: "POST",
-      headers: {
-        Authorization: this.token ? `Bearer ${this.token}` : "",
-      },
+      credentials: 'include',
       body: formData,
     });
 
@@ -1463,7 +1378,7 @@ class ApiService {
   async getPayoutDashboard(): Promise<ApiResponse<PayoutDashboardData>> {
     const response = await fetch(`${this.baseURL}/payouts/dashboard`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1480,7 +1395,7 @@ class ApiService {
 
     const response = await fetch(`${this.baseURL}/payouts?${queryParams}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1492,7 +1407,8 @@ class ApiService {
   }): Promise<ApiResponse<PayoutEntry>> {
     const response = await fetch(`${this.baseURL}/payouts`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1504,7 +1420,8 @@ class ApiService {
   ): Promise<ApiResponse<PayoutEntry>> {
     const response = await fetch(`${this.baseURL}/payouts/${payoutId}/complete`, {
       method: "PATCH",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1516,7 +1433,8 @@ class ApiService {
   ): Promise<ApiResponse<PayoutEntry>> {
     const response = await fetch(`${this.baseURL}/payouts/${payoutId}/fail`, {
       method: "PATCH",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data || {}),
     });
     return response.json();
@@ -1525,7 +1443,7 @@ class ApiService {
   async getPlatformSettings(): Promise<ApiResponse<PlatformSettingsData>> {
     const response = await fetch(`${this.baseURL}/platform-settings`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1533,7 +1451,8 @@ class ApiService {
   async updatePlatformSettings(data: Partial<PlatformSettingsData>): Promise<ApiResponse<PlatformSettingsData>> {
     const response = await fetch(`${this.baseURL}/platform-settings`, {
       method: "PATCH",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1545,7 +1464,8 @@ class ApiService {
   ): Promise<ApiResponse<Gym>> {
     const response = await fetch(`${this.baseURL}/gyms/${gymId}/commission`, {
       method: "PATCH",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1554,7 +1474,7 @@ class ApiService {
   async getGymOwnerEarningsSummary(): Promise<ApiResponse<GymOwnerEarningsSummary>> {
     const response = await fetch(`${this.baseURL}/payouts/my/summary`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1569,7 +1489,7 @@ class ApiService {
 
     const response = await fetch(`${this.baseURL}/payouts/my/history?${queryParams}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1577,7 +1497,8 @@ class ApiService {
   async updateBankDetails(data: Partial<BankDetailsData>): Promise<ApiResponse<BankDetailsData>> {
     const response = await fetch(`${this.baseURL}/users/bank-details`, {
       method: "PUT",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1586,7 +1507,7 @@ class ApiService {
   async getBankDetails(): Promise<ApiResponse<BankDetailsData>> {
     const response = await fetch(`${this.baseURL}/users/bank-details`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1615,7 +1536,8 @@ class ApiService {
   }): Promise<ApiResponse<{ member: GymMember; payment: OfflinePayment | null }>> {
     const response = await fetch(`${this.baseURL}/gym-members`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1634,7 +1556,7 @@ class ApiService {
 
     const response = await fetch(`${this.baseURL}/gym-members/gym/${gymId}?${queryParams}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1642,7 +1564,7 @@ class ApiService {
   async getGymMember(id: string): Promise<ApiResponse<GymMember>> {
     const response = await fetch(`${this.baseURL}/gym-members/${id}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1650,7 +1572,8 @@ class ApiService {
   async updateGymMember(id: string, data: Partial<GymMember>): Promise<ApiResponse<GymMember>> {
     const response = await fetch(`${this.baseURL}/gym-members/${id}`, {
       method: "PUT",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1659,7 +1582,7 @@ class ApiService {
   async deleteGymMember(id: string): Promise<ApiResponse<{ message: string }>> {
     const response = await fetch(`${this.baseURL}/gym-members/${id}`, {
       method: "DELETE",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1667,7 +1590,8 @@ class ApiService {
   async freezeGymMember(id: string, data: { startDate: string; endDate: string; reason?: string }): Promise<ApiResponse<GymMember>> {
     const response = await fetch(`${this.baseURL}/gym-members/${id}/freeze`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1676,7 +1600,7 @@ class ApiService {
   async unfreezeGymMember(id: string): Promise<ApiResponse<GymMember>> {
     const response = await fetch(`${this.baseURL}/gym-members/${id}/unfreeze`, {
       method: "POST",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1687,7 +1611,8 @@ class ApiService {
   }): Promise<ApiResponse<{ member: GymMember; payment: OfflinePayment | null }>> {
     const response = await fetch(`${this.baseURL}/gym-members/${id}/renew`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1699,7 +1624,7 @@ class ApiService {
 
     const response = await fetch(`${this.baseURL}/gym-members/gym/${gymId}/expiring?${queryParams}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1707,7 +1632,7 @@ class ApiService {
   async searchGymMembers(gymId: string, q: string): Promise<ApiResponse<GymMember[]>> {
     const response = await fetch(`${this.baseURL}/gym-members/gym/${gymId}/search?q=${encodeURIComponent(q)}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1717,7 +1642,8 @@ class ApiService {
   async checkInMember(data: { gymId: string; memberId: string; notes?: string }): Promise<ApiResponse<Visit> & { warning?: string }> {
     const response = await fetch(`${this.baseURL}/visits/check-in`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1726,7 +1652,8 @@ class ApiService {
   async checkOutMember(visitId: string, notes?: string): Promise<ApiResponse<Visit>> {
     const response = await fetch(`${this.baseURL}/visits/check-out/${visitId}`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify({ notes }),
     });
     return response.json();
@@ -1735,7 +1662,7 @@ class ApiService {
   async getTodayAttendance(gymId: string): Promise<ApiResponse<Visit[]>> {
     const response = await fetch(`${this.baseURL}/visits/gym/${gymId}/today`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1743,7 +1670,7 @@ class ApiService {
   async getCurrentlyInGym(gymId: string): Promise<ApiResponse<Visit[]> & { count?: number }> {
     const response = await fetch(`${this.baseURL}/visits/gym/${gymId}/currently-in`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1760,7 +1687,7 @@ class ApiService {
 
     const response = await fetch(`${this.baseURL}/visits/gym/${gymId}?${queryParams}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1768,7 +1695,7 @@ class ApiService {
   async getMemberVisits(memberId: string): Promise<ApiResponse<Visit[]>> {
     const response = await fetch(`${this.baseURL}/visits/member/${memberId}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1776,7 +1703,7 @@ class ApiService {
   async getVisitStats(gymId: string): Promise<ApiResponse<VisitStats>> {
     const response = await fetch(`${this.baseURL}/visits/gym/${gymId}/stats`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1796,7 +1723,8 @@ class ApiService {
   }): Promise<ApiResponse<OfflinePayment>> {
     const response = await fetch(`${this.baseURL}/offline-payments`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
     return response.json();
@@ -1815,7 +1743,7 @@ class ApiService {
 
     const response = await fetch(`${this.baseURL}/offline-payments/gym/${gymId}?${queryParams}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1823,7 +1751,7 @@ class ApiService {
   async getMemberOfflinePayments(memberId: string): Promise<ApiResponse<OfflinePayment[]>> {
     const response = await fetch(`${this.baseURL}/offline-payments/member/${memberId}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1835,7 +1763,7 @@ class ApiService {
 
     const response = await fetch(`${this.baseURL}/offline-payments/gym/${gymId}/summary?${queryParams}`, {
       method: "GET",
-      headers: this.getHeaders(),
+      credentials: 'include',
     });
     return response.json();
   }
@@ -1843,42 +1771,9 @@ class ApiService {
   async refundOfflinePayment(id: string, notes?: string): Promise<ApiResponse<OfflinePayment>> {
     const response = await fetch(`${this.baseURL}/offline-payments/${id}/refund`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
       body: JSON.stringify({ notes }),
-    });
-    return response.json();
-  }
-
-  // Favorites
-  async toggleFavorite(gymId: string): Promise<ApiResponse<{ isFavorite: boolean }>> {
-    const response = await fetch(`${this.baseURL}/favorites/toggle`, {
-      method: "POST",
-      headers: this.getHeaders(),
-      body: JSON.stringify({ gymId }),
-    });
-    return response.json();
-  }
-
-  async getUserFavorites(): Promise<ApiResponse<any[]>> {
-    const response = await fetch(`${this.baseURL}/favorites`, {
-      method: "GET",
-      headers: this.getHeaders(),
-    });
-    return response.json();
-  }
-
-  async checkFavorite(gymId: string): Promise<ApiResponse<{ isFavorite: boolean }>> {
-    const response = await fetch(`${this.baseURL}/favorites/check/${gymId}`, {
-      method: "GET",
-      headers: this.getHeaders(),
-    });
-    return response.json();
-  }
-
-  async removeFavorite(gymId: string): Promise<ApiResponse<any>> {
-    const response = await fetch(`${this.baseURL}/favorites/${gymId}`, {
-      method: "DELETE",
-      headers: this.getHeaders(),
     });
     return response.json();
   }

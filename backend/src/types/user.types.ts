@@ -20,6 +20,7 @@ export interface IUser extends Document {
   isPhoneVerified: boolean;
   isActive: boolean;
   password?: string;
+  tokenVersion: number;
   otp?: string;
   otpExpires?: Date;
   otpAttempts?: number;
@@ -36,11 +37,13 @@ export interface IUser extends Document {
     upiId?: string;
     isVerified: boolean;
   };
+  tokenVersion: number;
   createdAt: Date;
   updatedAt: Date;
 
   // Methods
   comparePassword(candidatePassword: string): Promise<boolean>;
+  getDecryptedBankDetails(): any;
 }
 
 // User registration request interface
