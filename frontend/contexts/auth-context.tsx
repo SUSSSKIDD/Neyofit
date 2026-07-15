@@ -13,12 +13,11 @@ interface AuthContextType {
   loginWithOtp: (email: string, otp: string) => Promise<{ success: boolean; error?: string }>;
   registerWithOtp: (data: { email: string; otp: string; name?: string; phone?: string; password?: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  checkAuthStatus: () => void;
+  checkAuthStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = 'neyofit_auth_token';
 const USER_KEY = 'neyofit_user_data';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -28,30 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAuthenticated = !!user;
 
-  // Secure token storage functions
-  const setAuthToken = (token: string) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(TOKEN_KEY, token);
-      apiService.setToken(token);
-    }
-  };
-
-  const getAuthToken = (): string | null => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(TOKEN_KEY);
-    }
-    return null;
-  };
-
-  const removeAuthToken = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
-      sessionStorage.clear();
-      apiService.setToken(null);
-    }
-  };
-
+  // User data storage (non-sensitive)
   const setUserData = (userData: User) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem(USER_KEY, JSON.stringify(userData));
@@ -66,14 +42,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   };
 
+  const removeUserData = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(USER_KEY);
+    }
+  };
+
   // Login function with API integration
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await apiService.loginUser({ email, password });
       
       if (response.success && response.data) {
-        const { user: userData, token } = response.data;
-        setAuthToken(token);
+        const { user: userData } = response.data;
         setUserData(userData);
         setUser(userData);
         return { success: true };
@@ -92,8 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await apiService.registerUser(userData);
       
       if (response.success && response.data) {
-        const { user: newUser, token } = response.data;
-        setAuthToken(token);
+        const { user: newUser } = response.data;
         setUserData(newUser);
         setUser(newUser);
         return { success: true };
@@ -112,8 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await apiService.verifyOtp({ email, otp, purpose: 'login' });
 
       if (response.success && response.data) {
-        const { user: userData, token } = response.data;
-        setAuthToken(token);
+        const { user: userData } = response.data;
         setUserData(userData);
         setUser(userData);
         return { success: true };
@@ -132,8 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await apiService.verifyOtp({ ...data, purpose: 'signup' });
 
       if (response.success && response.data) {
-        const { user: userData, token } = response.data;
-        setAuthToken(token);
+        const { user: userData } = response.data;
         setUserData(userData);
         setUser(userData);
         return { success: true };
@@ -154,14 +132,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiService.logoutUser();
     } catch (error) {
       console.error('Logout API call failed:', error);
-      // Continue with local logout even if API call fails
     } finally {
-      // Clear all local storage and state
-      removeAuthToken();
+      removeUserData();
       setUser(null);
       setIsLoading(false);
-      
-      // Redirect to login page
       router.push('/login');
     }
   };
@@ -171,16 +145,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
 
     try {
-      const token = getAuthToken();
-
-      if (!token) {
-        setUser(null);
-        setIsLoading(false);
-        return;
-      }
-
-      apiService.setToken(token);
-
       try {
         const response = await apiService.verifyToken();
         if (response.success && response.data?.user) {
@@ -188,8 +152,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(userData);
           setUserData(userData);
         } else {
-          // Token is invalid or expired
-          removeAuthToken();
+          // Token is invalid or expired - try to refresh
+          removeUserData();
           setUser(null);
         }
       } catch {
@@ -212,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Listen for 401 unauthorized events to auto-logout
   useEffect(() => {
     const handleUnauthorized = () => {
-      removeAuthToken();
+      removeUserData();
       setUser(null);
       router.push('/login');
     };

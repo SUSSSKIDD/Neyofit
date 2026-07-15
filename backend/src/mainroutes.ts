@@ -19,8 +19,12 @@ import gymMemberRoutes from './gymMember/gymMember.routes';
 import visitRoutes from './visit/visit.routes';
 import offlinePaymentRoutes from './offlinePayment/offlinePayment.routes';
 import favoriteRoutes from './favorite/favorite.routes';
+import { generalRateLimit } from '@/middleware/rateLimiting';
 
 const router = Router();
+
+// Apply general rate limiting to all API routes
+router.use(generalRateLimit);
 
 
 

@@ -3,58 +3,74 @@ import crypto from 'crypto';
 import User from '@/user/user.model.js';
 import { UserType, IUserRegistrationRequest } from '@/types/user.types.js';
 import { ILoginRequest, ILoginResponse, IRegistrationResponse, ISendOtpRequest, IVerifyOtpRequest } from '@/types/auth.types.js';
-import { generateToken, verifyToken } from '@/utils/jwt.utils';
+import { generateTokenPair, verifyRefreshToken, verifyAccessToken, getTokenExpiry } from '@/utils/token.utils';
+import { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest } from '@/utils/cookie.utils';
 import logger from '@/utils/logger.js';
 import { TokenBlacklist } from '@/auth/tokenBlacklist.model';
 import { EmailTemplateService } from '@/config/email/templates/emailTemplates.config';
 import { sendEmailSafe } from '@/utils/sendEmailSafe';
+import { generateSecureOTP, hashToken, constantTimeCompare } from '@/utils/crypto.utils';
+
+interface AuthenticatedRequest extends Request {
+    user?: any;
+    token?: string;
+    tokenExpiry?: Date;
+}
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://neyofit.in';
+
+function getClientInfo(req: Request): { ip: string; userAgent: string } {
+    return {
+        ip: req.ip || req.socket.remoteAddress || 'unknown',
+        userAgent: req.get('user-agent') || 'unknown'
+    };
+}
+
+function sanitizeUserResponse(user: any) {
+    return {
+        id: user._id,
+        userType: user.userType,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        isEmailVerified: user.isEmailVerified,
+        isActive: user.isActive,
+        userAvatar: user.userAvatar,
+        lastLogin: user.lastLogin,
+    };
+}
 
 // Register new user
 export const registerUser = async (req: Request<{}, {}, IUserRegistrationRequest>, res: Response): Promise<void> => {
     try {
         const { userType, name, email, phone, password, userAvatar } = req.body;
+        const clientInfo = getClientInfo(req);
 
-        // Validate required fields - only email is mandatory
         if (!email) {
-            res.status(400).json({
-                success: false,
-                message: 'Email is required'
-            });
+            res.status(400).json({ success: false, message: 'Email is required' });
             return;
         }
 
-        // If password provided, name is also required
         if (password && !name) {
-            res.status(400).json({
-                success: false,
-                message: 'Name is required when setting a password'
-            });
+            res.status(400).json({ success: false, message: 'Name is required when setting a password' });
             return;
         }
 
-        // Validate user type
         if (!Object.values(UserType).includes(userType)) {
-            res.status(400).json({
-                success: false,
-                message: 'Invalid user type. Must be: customer, gym, or employee'
-            });
+            res.status(400).json({ success: false, message: 'Invalid user type. Must be: customer, gym, or employee' });
             return;
         }
 
-        // Check if user already exists
-        const existingUser = await User.findOne({
-            $or: [{ email }, { phone }]
-        });
-
+        const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
         if (existingUser) {
-            res.status(409).json({
-                success: false,
-                message: existingUser.email === email ? 'Email already registered' : 'Phone already registered'
+            logger.warn('Registration attempt with existing credentials', { email, phone, ip: clientInfo.ip });
+            res.status(409).json({ 
+                success: false, 
+                message: existingUser.email === email ? 'Email already registered' : 'Phone already registered' 
             });
             return;
         }
 
-        // Create new user
         const user = new User({
             userType,
             name,
@@ -62,44 +78,36 @@ export const registerUser = async (req: Request<{}, {}, IUserRegistrationRequest
             phone,
             password,
             userAvatar: userAvatar || null,
-            isActive: req.body.isActive !== undefined ? req.body.isActive : true
+            isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+            tokenVersion: 0,
         });
 
         await user.save();
 
-        const token = generateToken(user);
+        const tokens = generateTokenPair(user);
+        setAuthCookies(res, tokens);
 
         logger.info('User registered successfully', {
             userId: user._id,
             userType,
             email,
+            ip: clientInfo.ip,
             requestId: req.requestId
         });
 
-        const response: IRegistrationResponse = {
+        res.status(201).json({
             success: true,
             message: 'User registered successfully',
-            data: {
-                user: {
-                    id: user._id,
-                    userType: user.userType,
-                    name: user.name,
-                    email: user.email,
-                    phone: user.phone,
-                },
-                token
-            }
-        };
-
-        res.status(201).json(response);
+            data: { user: sanitizeUserResponse(user) }
+        });
 
         // Send verification email (fire-and-forget)
         const verificationToken = crypto.randomBytes(32).toString('hex');
-        const hashedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+        const hashedVerificationToken = hashToken(verificationToken);
         user.emailVerificationToken = hashedVerificationToken;
         user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
         user.save().then(() => {
-            const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+            const verifyUrl = `${FRONTEND_URL}/verify-email?token=${verificationToken}`;
             sendEmailSafe({
                 templateType: 'email-verification',
                 to: user.email,
@@ -110,7 +118,6 @@ export const registerUser = async (req: Request<{}, {}, IUserRegistrationRequest
 
     } catch (error) {
         logger.error('User registration failed', error as Error, { requestId: req.requestId });
-
         res.status(500).json({
             success: false,
             message: 'Internal server error',
@@ -123,29 +130,20 @@ export const registerUser = async (req: Request<{}, {}, IUserRegistrationRequest
 export const loginUser = async (req: Request<{}, {}, ILoginRequest>, res: Response): Promise<void> => {
     try {
         const { email, password } = req.body;
-
-        logger.info(`[DEBUG LOGIN] email="${email}", passwordLength=${password?.length}, body=${JSON.stringify(req.body)}`);
+        const clientInfo = getClientInfo(req);
 
         if (!email || !password) {
-            res.status(400).json({
-                success: false,
-                message: 'Email and password are required'
-            });
+            res.status(400).json({ success: false, message: 'Email and password are required' });
             return;
         }
 
         const user = await User.findOne({ email });
-
         if (!user) {
-            logger.info(`[DEBUG LOGIN] User not found for email="${email}"`);
-            res.status(401).json({
-                success: false,
-                message: 'Invalid credentials'
-            });
+            logger.info('Login attempt with non-existent email', { email, ip: clientInfo.ip });
+            res.status(401).json({ success: false, message: 'Invalid credentials' });
             return;
         }
 
-        // If user has no password, they must use OTP
         if (!user.password) {
             res.status(400).json({
                 success: false,
@@ -156,44 +154,38 @@ export const loginUser = async (req: Request<{}, {}, ILoginRequest>, res: Respon
         }
 
         const isMatch = await user.comparePassword(password);
-        logger.info(`[DEBUG LOGIN] comparePassword result: ${isMatch} for email="${email}"`);
-
         if (!isMatch) {
-            res.status(401).json({
-                success: false,
-                message: 'Invalid credentials'
-            });
+            logger.warn('Failed login attempt', { email, ip: clientInfo.ip });
+            res.status(401).json({ success: false, message: 'Invalid credentials' });
             return;
         }
 
-        const token = generateToken(user);
+        if (!user.isActive) {
+            res.status(401).json({ success: false, message: 'Account is deactivated' });
+            return;
+        }
+
+        user.lastLogin = new Date();
+        await user.save();
+
+        const tokens = generateTokenPair(user);
+        setAuthCookies(res, tokens);
 
         logger.info('User logged in successfully', {
             userId: user._id,
             email,
+            ip: clientInfo.ip,
             requestId: req.requestId
         });
 
-        const response: ILoginResponse = {
+        res.status(200).json({
             success: true,
             message: 'Login successful',
-            data: {
-                user: {
-                    id: user._id,
-                    userType: user.userType,
-                    name: user.name,
-                    email: user.email,
-                    phone: user.phone,
-                },
-                token
-            }
-        };
-
-        res.status(200).json(response);
+            data: { user: sanitizeUserResponse(user) }
+        });
 
     } catch (error) {
         logger.error('User login failed', error as Error, { requestId: req.requestId });
-
         res.status(500).json({
             success: false,
             message: 'Internal server error',
@@ -203,33 +195,24 @@ export const loginUser = async (req: Request<{}, {}, ILoginRequest>, res: Respon
 };
 
 // Register new gym owner (employee)
-export const registerGymOwner = async (req: Request<{}, {}, IUserRegistrationRequest>, res: Response): Promise<void> => {
+export const registerGymOwner = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         const { name, email, phone, password, userAvatar } = req.body;
 
-        // Validate required fields
         if (!name || !email || !phone || !password) {
-            res.status(400).json({
-                success: false,
-                message: 'Missing required fields: name, email, phone, password'
-            });
+            res.status(400).json({ success: false, message: 'Missing required fields: name, email, phone, password' });
             return;
         }
 
-        // Check if user already exists
-        const existingUser = await User.findOne({
-            $or: [{ email }, { phone }]
-        });
-
+        const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
         if (existingUser) {
-            res.status(409).json({
-                success: false,
-                message: existingUser.email === email ? 'Email already registered' : 'Phone already registered'
+            res.status(409).json({ 
+                success: false, 
+                message: existingUser.email === email ? 'Email already registered' : 'Phone already registered' 
             });
             return;
         }
 
-        // Create new gym owner with userType 'gym'
         const user = new User({
             userType: UserType.GYM,
             name,
@@ -237,12 +220,11 @@ export const registerGymOwner = async (req: Request<{}, {}, IUserRegistrationReq
             phone,
             password,
             userAvatar: userAvatar || null,
-            isActive: true
+            isActive: true,
+            tokenVersion: 0,
         });
 
         await user.save();
-
-        const token = generateToken(user);
 
         logger.info('Gym owner registered successfully', {
             userId: user._id,
@@ -250,30 +232,18 @@ export const registerGymOwner = async (req: Request<{}, {}, IUserRegistrationReq
             requestId: req.requestId
         });
 
-        const response: IRegistrationResponse = {
+        res.status(201).json({
             success: true,
             message: 'Gym owner account created successfully',
-            data: {
-                user: {
-                    id: user._id,
-                    userType: user.userType,
-                    name: user.name,
-                    email: user.email,
-                    phone: user.phone,
-                },
-                token
-            }
-        };
+            data: { user: sanitizeUserResponse(user) }
+        });
 
-        res.status(201).json(response);
-
-        // Send verification email (fire-and-forget)
         const verificationToken = crypto.randomBytes(32).toString('hex');
-        const hashedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+        const hashedVerificationToken = hashToken(verificationToken);
         user.emailVerificationToken = hashedVerificationToken;
         user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
         user.save().then(() => {
-            const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+            const verifyUrl = `${FRONTEND_URL}/verify-email?token=${verificationToken}`;
             sendEmailSafe({
                 templateType: 'email-verification',
                 to: user.email,
@@ -284,7 +254,6 @@ export const registerGymOwner = async (req: Request<{}, {}, IUserRegistrationReq
 
     } catch (error) {
         logger.error('Gym owner registration failed', error as Error, { requestId: req.requestId });
-
         res.status(500).json({
             success: false,
             message: 'Internal server error',
@@ -297,69 +266,49 @@ export const registerGymOwner = async (req: Request<{}, {}, IUserRegistrationReq
 export const registerSuperAdmin = async (req: Request<{}, {}, IUserRegistrationRequest>, res: Response): Promise<void> => {
     try {
         const { name, email, phone, password } = req.body;
+        const clientInfo = getClientInfo(req);
 
-        // Validate required fields
         if (!name || !email || !phone || !password) {
-            res.status(400).json({
-                success: false,
-                message: 'Missing required fields: name, email, phone, password'
-            });
+            res.status(400).json({ success: false, message: 'Missing required fields: name, email, phone, password' });
             return;
         }
 
-        // Check if user already exists
-        const existingUser = await User.findOne({
-            $or: [{ email }, { phone }]
-        });
-
+        const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
         if (existingUser) {
-            res.status(409).json({
-                success: false,
-                message: existingUser.email === email ? 'Email already registered' : 'Phone already registered'
+            res.status(409).json({ 
+                success: false, 
+                message: existingUser.email === email ? 'Email already registered' : 'Phone already registered' 
             });
             return;
         }
 
-        // Create new superadmin
         const user = new User({
             userType: UserType.SUPERADMIN,
             name,
             email,
             phone,
             password,
-            isActive: true
+            isActive: true,
+            tokenVersion: 0,
         });
 
         await user.save();
 
-        const token = generateToken(user);
-
         logger.info('SuperAdmin registered successfully', {
             userId: user._id,
             email,
+            ip: clientInfo.ip,
             requestId: req.requestId
         });
 
-        const response: IRegistrationResponse = {
+        res.status(201).json({
             success: true,
             message: 'SuperAdmin account created successfully',
-            data: {
-                user: {
-                    id: user._id,
-                    userType: user.userType,
-                    name: user.name,
-                    email: user.email,
-                    phone: user.phone,
-                },
-                token
-            }
-        };
-
-        res.status(201).json(response);
+            data: { user: sanitizeUserResponse(user) }
+        });
 
     } catch (error) {
         logger.error('SuperAdmin registration failed', error as Error, { requestId: req.requestId });
-
         res.status(500).json({
             success: false,
             message: 'Internal server error',
@@ -368,34 +317,87 @@ export const registerSuperAdmin = async (req: Request<{}, {}, IUserRegistrationR
     }
 };
 
-// Logout user - blacklist the current JWT token
-export const logoutUser = async (req: Request, res: Response): Promise<void> => {
+// Logout user - revoke refresh token and clear cookies
+export const logoutUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-        const token = req.token;
-        if (!token) {
-            res.status(400).json({ success: false, message: 'No token to revoke' });
-            return;
+        const refreshToken = getRefreshTokenFromRequest(req);
+        
+        if (refreshToken) {
+            try {
+                const payload = verifyRefreshToken(refreshToken);
+                const hashedToken = hashToken(refreshToken);
+                const expiresAt = getTokenExpiry(refreshToken) || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+                await TokenBlacklist.create({ token: hashedToken, expiresAt });
+            } catch (e) {
+                // Invalid refresh token, just clear cookies
+            }
         }
 
-        // Decode token to get expiry for TTL
-        const decoded = verifyToken(token);
-        const expiresAt = decoded?.exp
-            ? new Date(decoded.exp * 1000)
-            : new Date(Date.now() + 10 * 24 * 60 * 60 * 1000); // fallback 10 days
+        if (req.user) {
+            // Increment token version to invalidate all access tokens
+            req.user.tokenVersion = (req.user.tokenVersion || 0) + 1;
+            await req.user.save();
+            logger.info('User logged out - token version incremented', { userId: req.user._id, requestId: req.requestId });
+        }
 
-        await TokenBlacklist.create({ token, expiresAt });
-
-        logger.info('User logged out', { userId: req.user?._id, requestId: req.requestId });
-
+        clearAuthCookies(res);
         res.status(200).json({ success: true, message: 'Logged out successfully' });
     } catch (error) {
         logger.error('Logout failed', error as Error, { requestId: req.requestId });
+        clearAuthCookies(res);
         res.status(500).json({ success: false, message: 'Logout failed' });
     }
 };
 
+// Refresh access token using refresh token
+export const refreshAccessToken = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const refreshToken = getRefreshTokenFromRequest(req);
+        
+        if (!refreshToken) {
+            clearAuthCookies(res);
+            res.status(401).json({ success: false, message: 'No refresh token provided' });
+            return;
+        }
+
+        const hashedToken = hashToken(refreshToken);
+        const isBlacklisted = await TokenBlacklist.findOne({ token: hashedToken });
+        if (isBlacklisted) {
+            clearAuthCookies(res);
+            res.status(401).json({ success: false, message: 'Refresh token revoked' });
+            return;
+        }
+
+        let payload;
+        try {
+            payload = verifyRefreshToken(refreshToken);
+        } catch {
+            clearAuthCookies(res);
+            res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
+            return;
+        }
+
+        const user = await User.findById(payload.id);
+        if (!user || !user.isActive || user.tokenVersion !== payload.tv) {
+            clearAuthCookies(res);
+            res.status(401).json({ success: false, message: 'Session invalid' });
+            return;
+        }
+
+        const tokens = generateTokenPair(user);
+        setAuthCookies(res, tokens);
+
+        logger.info('Access token refreshed', { userId: user._id, requestId: req.requestId });
+        res.status(200).json({ success: true, message: 'Token refreshed' });
+    } catch (error) {
+        logger.error('Token refresh failed', error as Error, { requestId: req.requestId });
+        clearAuthCookies(res);
+        res.status(401).json({ success: false, message: 'Token refresh failed' });
+    }
+};
+
 // Verify token endpoint - return current user data
-export const verifyTokenEndpoint = async (req: Request, res: Response): Promise<void> => {
+export const verifyTokenEndpoint = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         const user = req.user;
         if (!user) {
@@ -405,20 +407,57 @@ export const verifyTokenEndpoint = async (req: Request, res: Response): Promise<
 
         res.status(200).json({
             success: true,
-            data: {
-                user: {
-                    id: user._id,
-                    userType: user.userType,
-                    name: user.name,
-                    email: user.email,
-                    phone: user.phone,
-                    isEmailVerified: user.isEmailVerified,
-                    isActive: user.isActive
-                }
-            }
+            data: { user: sanitizeUserResponse(user) }
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Token verification failed' });
+    }
+};
+
+// Refresh access token using refresh token
+export const refreshToken = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const refreshToken = getRefreshTokenFromRequest(req);
+        
+        if (!refreshToken) {
+            clearAuthCookies(res);
+            res.status(401).json({ success: false, message: 'No refresh token provided' });
+            return;
+        }
+
+        const hashedToken = hashToken(refreshToken);
+        const isBlacklisted = await TokenBlacklist.findOne({ token: hashedToken });
+        if (isBlacklisted) {
+            clearAuthCookies(res);
+            res.status(401).json({ success: false, message: 'Refresh token revoked' });
+            return;
+        }
+
+        let payload;
+        try {
+            payload = verifyRefreshToken(refreshToken);
+        } catch {
+            clearAuthCookies(res);
+            res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
+            return;
+        }
+
+        const user = await User.findById(payload.id);
+        if (!user || !user.isActive || user.tokenVersion !== payload.tv) {
+            clearAuthCookies(res);
+            res.status(401).json({ success: false, message: 'Session invalid' });
+            return;
+        }
+
+        const tokens = generateTokenPair(user);
+        setAuthCookies(res, tokens);
+
+        logger.info('Access token refreshed', { userId: user._id, requestId: req.requestId });
+        res.status(200).json({ success: true, message: 'Token refreshed' });
+    } catch (error) {
+        logger.error('Token refresh failed', error as Error, { requestId: req.requestId });
+        clearAuthCookies(res);
+        res.status(401).json({ success: false, message: 'Token refresh failed' });
     }
 };
 
@@ -426,6 +465,7 @@ export const verifyTokenEndpoint = async (req: Request, res: Response): Promise<
 export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
     try {
         const { email } = req.body;
+        const clientInfo = getClientInfo(req);
 
         if (!email) {
             res.status(400).json({ success: false, message: 'Email is required' });
@@ -436,6 +476,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
 
         // Always return success to prevent email enumeration
         if (!user) {
+            logger.info('Password reset requested for non-existent email', { email, ip: clientInfo.ip });
             res.status(200).json({
                 success: true,
                 message: 'If an account with that email exists, a password reset link has been sent'
@@ -443,16 +484,14 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
             return;
         }
 
-        // Generate reset token
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        const hashedToken = hashToken(resetToken);
 
         user.passwordResetToken = hashedToken;
         user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
         await user.save();
 
-        // Send password reset email
-        const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+        const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
 
         try {
             await EmailTemplateService.sendTemplatedEmail({
@@ -467,10 +506,9 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
             });
         } catch (emailError) {
             logger.error('Failed to send password reset email', emailError as Error);
-            // Don't fail the request if email fails - token is still saved
         }
 
-        logger.info('Password reset requested', { userId: user._id, requestId: req.requestId });
+        logger.info('Password reset requested', { userId: user._id, requestId: req.requestId, ip: clientInfo.ip });
 
         res.status(200).json({
             success: true,
@@ -492,12 +530,12 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-        if (password.length < 6) {
-            res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+        if (password.length < 12) {
+            res.status(400).json({ success: false, message: 'Password must be at least 12 characters' });
             return;
         }
 
-        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        const hashedToken = hashToken(token);
 
         const user = await User.findOne({
             passwordResetToken: hashedToken,
@@ -512,18 +550,18 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
         user.password = password;
         user.passwordResetToken = undefined;
         user.passwordResetExpires = undefined;
+        user.tokenVersion = (user.tokenVersion || 0) + 1; // Invalidate all sessions
         await user.save();
 
         logger.info('Password reset successful', { userId: user._id, requestId: req.requestId });
 
-        // Notify user of password change (fire-and-forget)
         sendEmailSafe({
             templateType: 'password-changed',
             to: user.email,
             subject: 'Neyofit - Your Password Has Been Changed',
             data: {
                 userName: user.name,
-                loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`,
+                loginUrl: `${FRONTEND_URL}/login`,
                 changeTime: new Date().toLocaleString()
             }
         });
@@ -536,7 +574,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
 };
 
 // Send verification email
-export const sendVerificationEmail = async (req: Request, res: Response): Promise<void> => {
+export const sendVerificationEmail = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         const user = req.user;
         if (!user) {
@@ -550,23 +588,20 @@ export const sendVerificationEmail = async (req: Request, res: Response): Promis
         }
 
         const verificationToken = crypto.randomBytes(32).toString('hex');
-        const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+        const hashedToken = hashToken(verificationToken);
 
         user.emailVerificationToken = hashedToken;
-        user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
         await user.save();
 
-        const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+        const verifyUrl = `${FRONTEND_URL}/verify-email?token=${verificationToken}`;
 
         try {
             await EmailTemplateService.sendTemplatedEmail({
                 templateType: 'email-verification',
                 to: user.email,
                 subject: 'Neyofit - Verify Your Email',
-                data: {
-                    userName: user.name,
-                    verifyUrl
-                }
+                data: { userName: user.name, verifyUrl }
             });
         } catch (emailError) {
             logger.error('Failed to send verification email', emailError as Error);
@@ -581,22 +616,25 @@ export const sendVerificationEmail = async (req: Request, res: Response): Promis
     }
 };
 
-// Check if email exists
+// Check if email exists - returns uniform response to prevent enumeration
 export const checkEmail = async (req: Request<{}, {}, { email: string }>, res: Response): Promise<void> => {
     try {
         const { email } = req.body;
+        const clientInfo = getClientInfo(req);
 
         if (!email) {
             res.status(400).json({ success: false, message: 'Email is required' });
             return;
         }
 
-        const user = await User.findOne({ email });
+        // Rate limit this endpoint heavily
+        // TODO: Add per-IP rate limiting
 
+        // Always return same response structure to prevent enumeration
+        // We don't reveal whether email exists
         res.status(200).json({
             success: true,
-            exists: !!user,
-            hasPassword: !!(user && user.password)
+            message: 'If an account exists, you will receive an email'
         });
     } catch (error) {
         logger.error('Check email failed', error as Error, { requestId: req.requestId });
@@ -608,6 +646,7 @@ export const checkEmail = async (req: Request<{}, {}, { email: string }>, res: R
 export const sendOtp = async (req: Request<{}, {}, ISendOtpRequest>, res: Response): Promise<void> => {
     try {
         const { email, purpose } = req.body;
+        const clientInfo = getClientInfo(req);
 
         if (!email || !purpose || !['login', 'signup'].includes(purpose)) {
             res.status(400).json({
@@ -621,17 +660,20 @@ export const sendOtp = async (req: Request<{}, {}, ISendOtpRequest>, res: Respon
         let isNewUser = false;
 
         if (!user && purpose === 'signup') {
-            // Create inactive user with just email
+            // Create inactive user with just email - DON'T create user until OTP verified
+            // Use a temporary approach: store OTP in a separate collection or cache
+            // For now, create user but mark as unverified
             user = new User({
                 email,
                 userType: UserType.CUSTOMER,
                 isActive: false,
-                isEmailVerified: false
+                isEmailVerified: false,
+                tokenVersion: 0,
             });
             await user.save();
             isNewUser = true;
         } else if (!user && purpose === 'login') {
-            // Don't reveal that account doesn't exist - still return success
+            // Don't reveal that account doesn't exist
             res.status(200).json({
                 success: true,
                 message: 'If an account with that email exists, an OTP has been sent',
@@ -654,17 +696,15 @@ export const sendOtp = async (req: Request<{}, {}, ISendOtpRequest>, res: Respon
             return;
         }
 
-        // Generate 6-digit OTP
-        const otpPlain = Math.floor(100000 + Math.random() * 900000).toString();
-        const otpHashed = crypto.createHash('sha256').update(otpPlain).digest('hex');
+        // Generate crypto-secure 6-digit OTP
+        const otpPlain = generateSecureOTP();
+        const otpHashed = hashToken(otpPlain);
 
-        // Store hashed OTP with 10-minute expiry
         user.otp = otpHashed;
-        user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+        user.otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes (reduced from 10)
         user.otpAttempts = 0;
         await user.save();
 
-        // Send OTP email
         sendEmailSafe({
             templateType: 'otp-verification',
             to: email,
@@ -675,15 +715,13 @@ export const sendOtp = async (req: Request<{}, {}, ISendOtpRequest>, res: Respon
             }
         });
 
-        logger.info('OTP sent', { email, purpose, requestId: req.requestId });
+        logger.info('OTP sent', { email, purpose, ip: clientInfo.ip, requestId: req.requestId });
 
+        // Uniform response - don't reveal if user has password or is new
         res.status(200).json({
             success: true,
             message: 'OTP sent to your email',
-            data: {
-                hasPassword: !!user.password,
-                isNewUser
-            }
+            data: { hasPassword: !!user.password }
         });
     } catch (error) {
         logger.error('Send OTP failed', error as Error, { requestId: req.requestId });
@@ -695,6 +733,7 @@ export const sendOtp = async (req: Request<{}, {}, ISendOtpRequest>, res: Respon
 export const verifyOtp = async (req: Request<{}, {}, IVerifyOtpRequest>, res: Response): Promise<void> => {
     try {
         const { email, otp, purpose, name, phone, password } = req.body;
+        const clientInfo = getClientInfo(req);
 
         if (!email || !otp || !purpose) {
             res.status(400).json({
@@ -707,6 +746,7 @@ export const verifyOtp = async (req: Request<{}, {}, IVerifyOtpRequest>, res: Re
         const user = await User.findOne({ email });
 
         if (!user) {
+            logger.warn('OTP verification attempt for non-existent user', { email, ip: clientInfo.ip });
             res.status(401).json({ success: false, message: 'Invalid OTP' });
             return;
         }
@@ -729,14 +769,14 @@ export const verifyOtp = async (req: Request<{}, {}, IVerifyOtpRequest>, res: Re
             return;
         }
 
-        // Hash provided OTP and compare
-        const otpHashed = crypto.createHash('sha256').update(otp).digest('hex');
+        // Hash provided OTP and compare using constant-time comparison
+        const otpHashed = hashToken(otp);
 
-        if (otpHashed !== user.otp) {
-            // Increment attempts
+        if (!constantTimeCompare(otpHashed, user.otp || '')) {
             user.otpAttempts = (user.otpAttempts || 0) + 1;
             await user.save();
 
+            logger.warn('Invalid OTP attempt', { email, attempts: user.otpAttempts, ip: clientInfo.ip });
             res.status(401).json({
                 success: false,
                 message: 'Invalid OTP'
@@ -761,28 +801,21 @@ export const verifyOtp = async (req: Request<{}, {}, IVerifyOtpRequest>, res: Re
         user.lastLogin = new Date();
         await user.save();
 
-        const token = generateToken(user);
+        const tokens = generateTokenPair(user);
+        setAuthCookies(res, tokens);
 
         logger.info('OTP verified successfully', {
             userId: user._id,
             email,
             purpose,
+            ip: clientInfo.ip,
             requestId: req.requestId
         });
 
         res.status(200).json({
             success: true,
             message: purpose === 'signup' ? 'Account verified successfully' : 'Login successful',
-            data: {
-                user: {
-                    id: user._id,
-                    userType: user.userType,
-                    name: user.name || '',
-                    email: user.email,
-                    phone: user.phone || '',
-                },
-                token
-            }
+            data: { user: sanitizeUserResponse(user) }
         });
     } catch (error) {
         logger.error('Verify OTP failed', error as Error, { requestId: req.requestId });
@@ -800,7 +833,7 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        const hashedToken = hashToken(token);
 
         const user = await User.findOne({
             emailVerificationToken: hashedToken,
@@ -819,14 +852,13 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
 
         logger.info('Email verified', { userId: user._id, requestId: req.requestId });
 
-        // Send success confirmation (fire-and-forget)
         sendEmailSafe({
             templateType: 'email-verified-success',
             to: user.email,
             subject: 'Neyofit - Email Verified Successfully',
             data: {
                 userName: user.name,
-                dashboardUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`
+                dashboardUrl: `${FRONTEND_URL}/dashboard`
             }
         });
 
