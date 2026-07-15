@@ -768,33 +768,6 @@ GET /health
 
 ---
 
-## 📊 Monitoring & Operations
-
-### Logging
-
-- **Format**: JSON with timestamp, level, message, context
-- **Levels**: error, warn, info, debug
-- **Correlation**: Request ID propagated through all services
-- **Sensitive Data**: Automatically masked (passwords, tokens, PII)
-
-### Key Metrics to Monitor
-
-| Metric | Alert Threshold |
-|--------|-----------------|
-| API Error Rate | > 1% over 5min |
-| Auth Failure Rate | > 5% over 5min |
-| Payment Failure Rate | > 2% over 5min |
-| DB Connection Pool | > 80% utilization |
-| Memory Usage | > 85% |
-| Disk Usage | > 80% |
-
-### Backup Strategy
-
-- **MongoDB**: Daily automated backups to cloud storage
-- **Point-in-time Recovery**: Enabled
-
----
-
 ## 📁 Project Structure
 
 ```
@@ -839,28 +812,6 @@ neyofit/
 └── README.md
 ```
 
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
-### Code Standards
-
-- TypeScript strict mode
-- ESLint + Prettier
-- Conventional commits
-- 80%+ test coverage for new code
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
@@ -871,13 +822,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Email**: support@neyofit.in
 
 ---
-
-## 🙏 Acknowledgments
-
-- [Express.js](https://expressjs.com/)
-- [Next.js](https://nextjs.org/)
-- [MongoDB](https://www.mongodb.com/)
-- [Razorpay](https://razorpay.com/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Radix UI](https://www.radix-ui.com/)
-- All open-source contributors
