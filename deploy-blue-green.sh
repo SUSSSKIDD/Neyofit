@@ -33,7 +33,7 @@ check_health() {
     log_info "Waiting for $name to be healthy..."
     
     while [ $attempt -le $max_attempts ]; do
-        if curl -sf "$url/api/v1/health" > /dev/null 2>&1; then
+        if curl -sf "$url" > /dev/null 2>&1; then
             log_info "$name is healthy!"
             return 0
         fi
@@ -96,14 +96,14 @@ BACKEND_PORT=$([ "$NEW_ENV" = "blue" ] && echo 8905 || echo 8915)
 FRONTEND_PORT=$([ "$NEW_ENV" = "blue" ] && echo 8906 || echo 8916)
 
 log_info "Running health checks..."
-check_health "http://localhost:${BACKEND_PORT}" "Backend ($NEW_ENV)" || {
+check_health "http://localhost:${BACKEND_PORT}/api/v1/health" "Backend ($NEW_ENV)" || {
     log_error "Backend health check failed, rolling back..."
     docker compose -f "$COMPOSE_FILE" stop "backend-${NEW_ENV}" "frontend-${NEW_ENV}"
     docker compose -f "$COMPOSE_FILE" rm -f "backend-${NEW_ENV}" "frontend-${NEW_ENV}"
     exit 1
 }
 
-check_health "http://localhost:${FRONTEND_PORT}" "Frontend ($NEW_ENV)" || {
+check_health "http://localhost:${FRONTEND_PORT}/" "Frontend ($NEW_ENV)" || {
     log_warn "Frontend health check failed, but continuing..."
 }
 
