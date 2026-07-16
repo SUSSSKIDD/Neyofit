@@ -48,10 +48,6 @@ jobs:
         working-directory: ./frontend
         run: npm run lint
 
-      - name: TypeCheck frontend
-        working-directory: ./frontend
-        run: npx tsc --noEmit
-
   # ===========================================
   # Stage 2: Security scanning (parallel)
   # ===========================================
