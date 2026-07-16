@@ -71,8 +71,8 @@ log_info "Current active environment: $ACTIVE_ENV"
 log_info "Deploying to: $NEW_ENV environment"
 
 # Pull latest code
-log_info "Pulling latest code from main branch..."
-git pull origin main || { log_error "Git pull failed"; exit 1; }
+log_info "Skipping git pull (code is synced via rsync)..."
+# git pull origin main || { log_error "Git pull failed"; exit 1; }
 
 # Build and start new environment
 log_info "Building and starting $NEW_ENV environment..."

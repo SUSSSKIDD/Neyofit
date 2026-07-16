@@ -5,7 +5,7 @@ services:
   backend-blue:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     container_name: neyofit-backend-blue
     restart: always
     ports:
@@ -20,7 +20,7 @@ services:
   frontend-blue:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     container_name: neyofit-frontend-blue
     restart: always
     ports:
@@ -36,7 +36,7 @@ services:
   backend-green:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     container_name: neyofit-backend-green
     restart: always
     ports:
@@ -51,7 +51,7 @@ services:
   frontend-green:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     container_name: neyofit-frontend-green
     restart: always
     ports:
