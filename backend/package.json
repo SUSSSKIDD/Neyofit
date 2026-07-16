@@ -7,10 +7,11 @@
     "scripts": {
         "dev": "nodemon --watch src --exec tsx src/server.ts",
         "dev:tsx": "tsx --tsconfig tsconfig.json src/server.ts",
-        "build": "tsup src/server.ts --format esm --out-dir dist --clean --dts",
+        "build": "tsup src/server.ts src/seed/seed.ts --format esm --out-dir dist --clean --dts",
         "start": "node dist/server.js",
         "clean": "rm -rf dist",
         "seed": "tsx --tsconfig tsconfig.json src/seed/seed.ts",
+        "seed:prod": "node dist/seed/seed.js",
         "test": "node --max-old-space-size=4096 --experimental-vm-modules node_modules/jest/bin/jest.js --config=jest.config.ts",
         "test:watch": "node --max-old-space-size=4096 --experimental-vm-modules node_modules/jest/bin/jest.js --config=jest.config.ts --watch",
         "test:coverage": "node --max-old-space-size=4096 --experimental-vm-modules node_modules/jest/bin/jest.js --config=jest.config.ts --coverage",

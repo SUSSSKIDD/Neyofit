@@ -55,7 +55,7 @@ async function seed() {
     name: 'Admin Neyofit',
     email: 'admin@Neyofit.com',
     phone: '+919999900001',
-    password: 'admin123',
+    password: 'NeyofitAdmin123',
     isActive: true,
     isEmailVerified: true,
   });
@@ -86,7 +86,7 @@ async function seed() {
       name: 'Amit Kumar',
       email: 'amit@gmail.com',
       phone: '+919999900010',
-      password: 'cust1234',
+      password: 'CustomerPass123',
       isActive: true,
       isEmailVerified: true,
     },
@@ -95,7 +95,7 @@ async function seed() {
       name: 'Sneha Gupta',
       email: 'sneha@gmail.com',
       phone: '+919999900011',
-      password: 'cust1234',
+      password: 'CustomerPass123',
       isActive: true,
       isEmailVerified: true,
     },
@@ -104,7 +104,7 @@ async function seed() {
       name: 'Rohit Mehra',
       email: 'rohit@gmail.com',
       phone: '+919999900012',
-      password: 'cust1234',
+      password: 'CustomerPass123',
       isActive: true,
       isEmailVerified: true,
     },
@@ -113,7 +113,7 @@ async function seed() {
       name: 'Neha Singh',
       email: 'neha@gmail.com',
       phone: '+919999900013',
-      password: 'cust1234',
+      password: 'CustomerPass123',
       isActive: true,
       isEmailVerified: true,
     },
@@ -122,7 +122,7 @@ async function seed() {
       name: 'Vikram Joshi',
       email: 'vikram@gmail.com',
       phone: '+919999900014',
-      password: 'cust1234',
+      password: 'CustomerPass123',
       isActive: true,
       isEmailVerified: true,
     },
@@ -488,19 +488,19 @@ async function seed() {
   console.log('🎉 Seed complete! Here are the login credentials:\n');
   console.log('  SUPERADMIN:');
   console.log('    Email: admin@Neyofit.com');
-  console.log('    Password: admin123\n');
+  console.log('    Password: NeyofitAdmin123\n');
   console.log('  GYM OWNER 1 (FitZone):');
   console.log('    Email: rajesh@fitzone.com');
-  console.log('    Password: gym12345\n');
+  console.log('    Password: GymOwnerPass123\n');
   console.log('  GYM OWNER 2 (Iron Pump):');
   console.log('    Email: priya@ironpump.com');
-  console.log('    Password: gym12345\n');
+  console.log('    Password: GymOwnerPass123\n');
   console.log('  CUSTOMERS:');
-  console.log('    Email: amit@gmail.com     | Password: cust1234');
-  console.log('    Email: sneha@gmail.com    | Password: cust1234');
-  console.log('    Email: rohit@gmail.com    | Password: cust1234');
-  console.log('    Email: neha@gmail.com     | Password: cust1234');
-  console.log('    Email: vikram@gmail.com   | Password: cust1234');
+  console.log('    Email: amit@gmail.com     | Password: CustomerPass123');
+  console.log('    Email: sneha@gmail.com    | Password: CustomerPass123');
+  console.log('    Email: rohit@gmail.com    | Password: CustomerPass123');
+  console.log('    Email: neha@gmail.com     | Password: CustomerPass123');
+  console.log('    Email: vikram@gmail.com   | Password: CustomerPass123');
   console.log('═'.repeat(50));
 
   await mongoose.disconnect();
