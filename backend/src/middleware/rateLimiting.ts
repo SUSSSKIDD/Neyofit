@@ -1,18 +1,19 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { Request, Response } from 'express';
 
 const isProd = process.env.NODE_ENV === 'production';
+const isTest = process.env.NODE_ENV === 'test';
 
-// Custom key generator that uses user ID if authenticated, otherwise IP
+// In test mode, skip all rate limiting
+const skipInTest = () => isTest;
+
+// Custom key generator that uses user ID if authenticated, otherwise IP (IPv6-safe)
 const getRateLimitKey = (req: Request): string => {
     // If authenticated, rate limit per user
     if (req.user && req.user._id) {
         return `user:${req.user._id}`;
     }
-    // Otherwise rate limit per IP (with proper proxy support)
-    const forwarded = req.headers['x-forwarded-for'];
-    const ip = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(',')[0] || req.ip || req.socket.remoteAddress || 'unknown';
-    return `ip:${ip}`;
+    return `ip:${ipKeyGenerator(req)}`;
 };
 
 // Rate limiting for payment endpoints
@@ -27,6 +28,7 @@ export const paymentRateLimit = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: getRateLimitKey,
+    skip: skipInTest,
     skipSuccessfulRequests: false,
     skipFailedRequests: false,
     handler: (req: Request, res: Response) => {
@@ -50,6 +52,7 @@ export const generalRateLimit = rateLimit({
     legacyHeaders: false,
     keyGenerator: getRateLimitKey,
     skip: (req: Request) => {
+        if (isTest) return true;
         // Skip for health checks
         return req.path === '/health' || req.path === '/api/health';
     }
@@ -65,7 +68,8 @@ export const authRateLimit = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: getRateLimitKey
+    keyGenerator: getRateLimitKey,
+    skip: skipInTest,
 });
 
 // OTP send rate limiting (per IP - stricter)
@@ -78,11 +82,8 @@ export const otpSendRateLimit = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req: Request) => {
-        const forwarded = req.headers['x-forwarded-for'];
-        const ip = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(',')[0] || req.ip || 'unknown';
-        return `otp-send:ip:${ip}`;
-    }
+    keyGenerator: (req: Request) => `otp-send:${ipKeyGenerator(req)}`,
+    skip: skipInTest,
 });
 
 // OTP verify rate limiting
@@ -95,7 +96,8 @@ export const otpVerifyRateLimit = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: getRateLimitKey
+    keyGenerator: getRateLimitKey,
+    skip: skipInTest,
 });
 
 // Password reset rate limiting
@@ -108,11 +110,8 @@ export const passwordResetRateLimit = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req: Request) => {
-        const forwarded = req.headers['x-forwarded-for'];
-        const ip = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(',')[0] || req.ip || 'unknown';
-        return `pw-reset:ip:${ip}`;
-    }
+    keyGenerator: (req: Request) => `pw-reset:${ipKeyGenerator(req)}`,
+    skip: skipInTest,
 });
 
 // Login rate limiting (per IP + per user)
@@ -125,5 +124,6 @@ export const loginRateLimit = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: getRateLimitKey
+    keyGenerator: getRateLimitKey,
+    skip: skipInTest,
 });

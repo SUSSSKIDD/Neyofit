@@ -116,8 +116,14 @@ export const registerUser = async (req: Request<{}, {}, IUserRegistrationRequest
             });
         }).catch((err: Error) => logger.error('Failed to save verification token', err));
 
-    } catch (error) {
+    } catch (error: any) {
         logger.error('User registration failed', error as Error, { requestId: req.requestId });
+        // Mongoose validation errors should be 400, not 500
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map((e: any) => e.message).join(', ');
+            res.status(400).json({ success: false, message: messages });
+            return;
+        }
         res.status(500).json({
             success: false,
             message: 'Internal server error',

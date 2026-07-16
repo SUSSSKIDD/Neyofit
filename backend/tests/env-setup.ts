@@ -1,4 +1,6 @@
 // Setup environment variables BEFORE any module imports
+process.env.NODE_ENV = 'test';
+process.env.MONGODB_URI = 'mongodb://localhost:27017/neyofit-test';
 process.env.ENCRYPTION_KEY = 'a'.repeat(64);
 process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-purposes-only-32';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-key-for-testing-purposes-only-32';
