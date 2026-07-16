@@ -143,8 +143,8 @@ export const setupEmailProviders = async (): Promise<void> => {
         const providers = await EmailProvider.find({ isActive: true });
         
         if (providers.length === 0) {
-            // await initializeDefaultProviders()
-            console.log("No active email providers found in database.");
+            await initializeDefaultProviders()
+            console.log("No active email providers found in database, initialized defaults.");
             return;
         }
 
@@ -192,77 +192,47 @@ export const setupEmailProviders = async (): Promise<void> => {
 };
 
 // Initialize default providers if database is empty
-// async function initializeDefaultProviders(): Promise<void> {
-//     try {
-//         // Create SMTP Provider
-//         await EmailProvider.create({
-//             name: 'default-smtp',
-//             type: 'smtp',
-//             isDefault: true,
-//             isActive: true,
-//             host: process.env.SMTP_HOST,
-//             port: Number(process.env.SMTP_PORT),
-//             secure: true,
-//             from: process.env.SMTP_FROM,
-//             auth: {
-//                 type: 'smtp',
-//                 user: process.env.SMTP_USER,
-//                 pass: process.env.SMTP_PASS
-//             }
-//         });
+async function initializeDefaultProviders(): Promise<void> {
+    try {
+        // Create SMTP Provider
+        await EmailProvider.create({
+            name: 'default-smtp',
+            type: 'smtp',
+            isDefault: true,
+            isActive: true,
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT),
+            secure: true,
+            from: process.env.SMTP_FROM,
+            auth: {
+                type: 'smtp',
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
+            }
+        });
 
-//         // Create Gmail Provider
-//         await EmailProvider.create({
-//             name: 'gmail',
-//             type: 'gmail',
-//             isActive: true,
-//             from: process.env.GMAIL_FROM,
-//             auth: {
-//                 type: 'oauth2',
-//                 user: process.env.GMAIL_USER,
-//                 clientId: process.env.GMAIL_CLIENT_ID,
-//                 clientSecret: process.env.GMAIL_CLIENT_SECRET,
-//                 redirectUrl: process.env.GMAIL_REDIRECT_URI,
-//                 callbackUrl:process.env.GMAIL_CALLBACK_URI,
-//             }
-//         });
+        // Create Gmail Provider
+        await EmailProvider.create({
+            name: 'gmail',
+            type: 'gmail',
+            isActive: true,
+            from: process.env.GMAIL_FROM,
+            auth: {
+                type: 'oauth2',
+                user: process.env.GMAIL_USER,
+                clientId: process.env.GMAIL_CLIENT_ID,
+                clientSecret: process.env.GMAIL_CLIENT_SECRET,
+                redirectUrl: process.env.GMAIL_REDIRECT_URI,
+                callbackUrl:process.env.GMAIL_CALLBACK_URI,
+            }
+        });
 
-//         // Optional: Create SendGrid Provider
-//         // if (process.env.SENDGRID_API_KEY) {
-//         //     await EmailProvider.create({
-//         //         name: 'sendgrid',
-//         //         type: 'sendgrid',
-//         //         isActive: true,
-//         //         from: process.env.SENDGRID_FROM,
-//         //         auth: {
-//         //             type: 'api',
-//         //             apiKey: process.env.SENDGRID_API_KEY
-//         //         }
-//         //     });
-//         // }
-
-//         // // Optional: Create Mailgun Provider
-//         // if (process.env.MAILGUN_API_KEY) {
-//         //     await EmailProvider.create({
-//         //         name: 'mailgun',
-//         //         type: 'mailgun',
-//         //         isActive: true,
-//         //         from: process.env.MAILGUN_FROM,
-//         //         domain: process.env.MAILGUN_DOMAIN,
-//         //         auth: {
-//         //             type: 'api',
-//         //             apiKey: process.env.MAILGUN_API_KEY
-//         //         }
-//         //     });
-//         // }
-
-//         console.log("Successfully initialized default providers in database");
+        console.log("Successfully initialized default providers in database");
         
-//         // Recursively call setup to initialize the service with new providers
-//         await setupEmailProviders();
+        // Recursively call setup to initialize the service with new providers
+        await setupEmailProviders();
 
-//     } catch (error) {
-//         console.error("Failed to initialize default providers:", error);
-//         // throw new APIError.InternalServerError("Failed to initialize default email providers");
-//     }
-// }
+    } catch (error) {
+        console.error("Failed to initialize default providers:", error);
+    }
+}
