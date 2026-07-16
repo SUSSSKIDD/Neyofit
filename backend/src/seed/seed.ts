@@ -65,7 +65,7 @@ async function seed() {
     name: 'Rajesh Sharma',
     email: 'rajesh@fitzone.com',
     phone: '+919999900002',
-    password: 'gym12345',
+    password: 'GymOwnerPass123',
     isActive: true,
     isEmailVerified: true,
   });
@@ -75,7 +75,7 @@ async function seed() {
     name: 'Priya Patel',
     email: 'priya@ironpump.com',
     phone: '+919999900003',
-    password: 'gym12345',
+    password: 'GymOwnerPass123',
     isActive: true,
     isEmailVerified: true,
   });
