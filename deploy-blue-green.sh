@@ -70,10 +70,11 @@ fi
 log_info "Current active environment: $ACTIVE_ENV"
 log_info "Deploying to: $NEW_ENV environment"
 
-# Pull latest code
-log_info "Skipping git pull (code is synced via SCP)..."
-# git reset --hard HEAD || { log_error "Git reset failed"; exit 1; }
-# git pull origin main || { log_error "Git pull failed"; exit 1; }
+# Pull latest code and force perfect sync with GitHub
+log_info "Synchronizing perfectly with GitHub..."
+git fetch --all || { log_error "Git fetch failed"; exit 1; }
+git reset --hard origin/main || { log_error "Git reset failed"; exit 1; }
+git pull origin main || { log_error "Git pull failed"; exit 1; }
 
 # Build and start new environment
 log_info "Building and starting $NEW_ENV environment..."
