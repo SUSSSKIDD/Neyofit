@@ -1,4 +1,5 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -19,23 +20,25 @@ import logger from '@/utils/logger.js';
 import mainRoutes from '@/mainroutes';
 import { specs } from '@/config/swagger.config.js';
 import { globalErrorHandler } from '@/middleware/errorHandler';
-import { securityHeaders } from '@/middleware/security';
+import { securityHeaders, devSecurityHeaders } from '@/middleware/security';
 import { setupEmailProviders } from '@/config/email/nodemailer/nodemailer.config';
 import { startEmailScheduler } from '@/config/email/scheduler/neyofit-email-cron';
 import { seedEmailTemplates } from '@/config/email/templates/seedTemplates';
 
-// Load environment variables
+const isProduction = process.env.NODE_ENV === 'production';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Debug environment variables
-// logger.info('Environment variables loaded:', {
-//     PORT: process.env.PORT,
-//     NODE_ENV: process.env.NODE_ENV,
-//     MONGODB_URI: process.env.MONGODB_URI ? 'Set' : 'Not set',
-//     CORS_ORIGIN: process.env.CORS_ORIGIN
-// });
+// Trust proxy for rate limiting and IP detection behind nginx
+app.set('trust proxy', 1);
+
+// Request size limits - prevent DoS via large payloads
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// Cookie parser for HTTP-only cookies
+app.use(cookieParser());
 
 // Bootstrap: connect to DB first, then start the server
 const bootstrap = async () => {
@@ -68,21 +71,35 @@ const bootstrap = async () => {
         }
     }
 
-    // 6. Middleware
+    // 6. Security headers middleware (must be early)
     app.use(securityHeaders);
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
+    
+    // Development-only: allow unsafe-eval for hot reloading
+    if (!isProduction) {
+        app.use(devSecurityHeaders);
+    }
+
+    // CORS middleware
     app.use(corsMiddleware);
+
+    // Logging middleware
     app.use(loggingMiddleware);
 
     // Serve uploaded files as static assets
     app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-    // API Documentation
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
-        customCss: '.swagger-ui .topbar { display: none }',
-        customSiteTitle: 'Neyofit API Documentation'
-    }));
+    // API Documentation - DISABLED IN PRODUCTION
+    if (!isProduction) {
+        app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+            customCss: '.swagger-ui .topbar { display: none }',
+            customSiteTitle: 'Neyofit API Documentation'
+        }));
+    } else {
+        // In production, return 404 for Swagger
+        app.use('/api-docs', (req, res) => {
+            res.status(404).json({ success: false, message: 'Not found' });
+        });
+    }
 
     // Use main routes
     app.use('/api/v1', mainRoutes);

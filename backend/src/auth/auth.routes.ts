@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import {
     registerUser,
     loginUser,
@@ -12,49 +11,21 @@ import {
     verifyEmail,
     checkEmail,
     sendOtp,
-    verifyOtp
+    verifyOtp,
+    refreshToken
 } from '@/auth/auth.controllers';
 import { authMiddleware } from '@/auth/auth.middleware';
 import { authorizeRoles } from '@/middleware/roleAuth';
 import { UserType } from '@/types/user.types';
+import {
+    authRateLimit,
+    loginRateLimit,
+    otpSendRateLimit,
+    otpVerifyRateLimit,
+    passwordResetRateLimit
+} from '@/middleware/rateLimiting';
 
 const router = Router();
-
-// Rate limiter for sensitive auth endpoints
-const authRateLimit = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10,
-    message: {
-        success: false,
-        message: 'Too many attempts, please try again after 15 minutes'
-    },
-    standardHeaders: true,
-    legacyHeaders: false
-});
-
-// Rate limiter for OTP send requests
-const otpRateLimit = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5,
-    message: {
-        success: false,
-        message: 'Too many OTP requests, please try again after 15 minutes'
-    },
-    standardHeaders: true,
-    legacyHeaders: false
-});
-
-// Rate limiter for OTP verification attempts
-const otpVerifyRateLimit = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10,
-    message: {
-        success: false,
-        message: 'Too many verification attempts, please try again after 15 minutes'
-    },
-    standardHeaders: true,
-    legacyHeaders: false
-});
 
 /**
  * @swagger
@@ -103,7 +74,7 @@ const otpVerifyRateLimit = rateLimit({
  *       409:
  *         description: Email or Phone already exists
  */
-router.post('/register-user', registerUser);
+router.post('/register-user', authRateLimit, registerUser);
 
 /**
  * @route   POST /api/v1/auth/check-email
@@ -117,7 +88,7 @@ router.post('/check-email', authRateLimit, checkEmail);
  * @desc    Send OTP to email for login or signup
  * @access  Public (rate-limited)
  */
-router.post('/send-otp', otpRateLimit, sendOtp);
+router.post('/send-otp', otpSendRateLimit, sendOtp);
 
 /**
  * @route   POST /api/v1/auth/verify-otp
@@ -131,14 +102,21 @@ router.post('/verify-otp', otpVerifyRateLimit, verifyOtp);
  * @desc    Login a user
  * @access  Public
  */
-router.post('/login-user', authRateLimit, loginUser);
+router.post('/login-user', loginRateLimit, loginUser);
 
 /**
  * @route   POST /api/v1/auth/register-gym-owner
  * @desc    Register a gym owner (employee) account
- * @access  Public
+ * @access  Protected (SuperAdmin only)
  */
 router.post('/register-gym-owner', authMiddleware, authorizeRoles([UserType.SUPERADMIN]), registerGymOwner);
+
+/**
+ * @route   POST /api/v1/auth/refresh-token
+ * @desc    Refresh access token using refresh token
+ * @access  Public (uses refresh token cookie)
+ */
+router.post('/refresh-token', refreshToken);
 
 /**
  * @route   POST /api/v1/auth/logout
@@ -159,14 +137,14 @@ router.get('/verify-token', authMiddleware, verifyTokenEndpoint);
  * @desc    Send password reset email
  * @access  Public (rate-limited)
  */
-router.post('/forgot-password', authRateLimit, forgotPassword);
+router.post('/forgot-password', passwordResetRateLimit, forgotPassword);
 
 /**
  * @route   POST /api/v1/auth/reset-password
  * @desc    Reset password using token
  * @access  Public (rate-limited)
  */
-router.post('/reset-password', authRateLimit, resetPassword);
+router.post('/reset-password', passwordResetRateLimit, resetPassword);
 
 /**
  * @route   POST /api/v1/auth/send-verification-email

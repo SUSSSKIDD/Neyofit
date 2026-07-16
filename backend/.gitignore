@@ -4,10 +4,10 @@ node_modules/
 # Build output
 dist/
 
-# Environment variables
+# Environment variables - NEVER COMMIT!
 .env
-.env
-.env.production
+.env.*
+!.env.example
 
 # Logs
 logs/
@@ -43,8 +43,7 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
-.env.test
+
 
 # IDE files
 .vscode/
@@ -60,4 +59,4 @@ jspm_packages/
 .Trashes
 ehthumbs.db
 Thumbs.db
-env
+
