@@ -33,7 +33,7 @@ check_health() {
     log_info "Waiting for $name to be healthy..."
     
     while [ $attempt -le $max_attempts ]; do
-        if curl -sf "$url/health" > /dev/null 2>&1; then
+        if curl -sf "$url/api/v1/health" > /dev/null 2>&1; then
             log_info "$name is healthy!"
             return 0
         fi

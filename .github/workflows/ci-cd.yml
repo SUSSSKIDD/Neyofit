@@ -205,7 +205,7 @@ jobs:
       - name: Post-deployment health check
         run: |
           sleep 10
-          curl -sf https://api.neyofit.in/health || exit 1
+          curl -sf https://api.neyofit.in/api/v1/health || exit 1
           curl -sf https://neyofit.in/ || exit 1
         env:
           API_URL: https://api.neyofit.in
