@@ -12,8 +12,8 @@ RUN npm ci --only=production --ignore-scripts
 
 COPY --chown=nodejs:nodejs dist ./dist
 
-RUN mkdir -p /app/uploads/gym-pictures /app/uploads/general \
-    && chown -R nodejs:nodejs /app/uploads
+RUN mkdir -p /app/uploads/gym-pictures /app/uploads/general /app/logs \
+    && chown -R nodejs:nodejs /app/uploads /app/logs
 
 USER nodejs
 
