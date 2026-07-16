@@ -71,8 +71,9 @@ log_info "Current active environment: $ACTIVE_ENV"
 log_info "Deploying to: $NEW_ENV environment"
 
 # Pull latest code
-log_info "Skipping git pull (code is synced via SCP)..."
-# git pull origin main || { log_error "Git pull failed"; exit 1; }
+log_info "Pulling latest code from main branch..."
+git reset --hard HEAD || { log_error "Git reset failed"; exit 1; }
+git pull origin main || { log_error "Git pull failed"; exit 1; }
 
 # Build and start new environment
 log_info "Building and starting $NEW_ENV environment..."
