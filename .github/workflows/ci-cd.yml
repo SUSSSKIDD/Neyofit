@@ -104,7 +104,7 @@ jobs:
         run: npm run build
 
       - name: Create backend artifact
-        run: tar -czf backend-dist.tar.gz backend/dist backend/Dockerfile.prod backend/package*.json
+        run: tar -czf backend-dist.tar.gz backend/dist backend/Dockerfile.prod backend/package*.json backend/load-env.cjs
 
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4
