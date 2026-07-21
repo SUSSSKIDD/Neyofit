@@ -21,6 +21,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { formatTime, parseTimeTo24, getDefaultTimeFormat, saveTimeFormat, TimeFormat } from "@/lib/utils"
 
 const DAYS_OF_WEEK = [
   "monday",
@@ -46,6 +48,17 @@ export default function GymSlotsPage() {
   const [loading, setLoading] = useState(true)
   const [savingDay, setSavingDay] = useState<string | null>(null)
   const [week, setWeek] = useState<WeekState>({})
+  const [timeFormat, setTimeFormat] = useState<TimeFormat>(() => getDefaultTimeFormat())
+
+  // Convert display time to 24h for storage
+  const to24h = (time: string) => parseTimeTo24(time)
+  // Convert 24h storage to display format
+  const toDisplay = (time: string) => formatTime(time, timeFormat)
+
+  const handleTimeFormatChange = (format: TimeFormat) => {
+    setTimeFormat(format)
+    saveTimeFormat(format)
+  }
 
   useEffect(() => {
     async function fetchSlots() {
@@ -110,12 +123,17 @@ export default function GymSlotsPage() {
   }
 
   const updateSlot = (day: string, slotId: string, field: keyof TimeSlot, value: string | boolean) => {
+    // Convert time fields to 24h for storage
+    const processedValue = (field === "startTime" || field === "endTime") 
+      ? to24h(value as string) 
+      : value
+
     setWeek((prev) => ({
       ...prev,
       [day]: {
         ...prev[day],
         slots: prev[day].slots.map((s) =>
-          s.id === slotId ? { ...s, [field]: value } : s
+          s.id === slotId ? { ...s, [field]: processedValue } : s
         ),
       },
     }))
@@ -127,15 +145,17 @@ export default function GymSlotsPage() {
     // Validate time ranges
     if (!dayData.isClosed) {
       for (const slot of dayData.slots) {
-        if (slot.startTime >= slot.endTime) {
+        if (to24h(slot.startTime) >= to24h(slot.endTime)) {
           toast.error(`"${slot.name}": Start time must be before end time`)
           return
         }
       }
       // Check for overlapping slots
-      const activeSlots = dayData.slots.filter(s => s.isActive).sort((a, b) => a.startTime.localeCompare(b.startTime))
+      const activeSlots = dayData.slots
+        .filter((s) => s.isActive)
+        .sort((a, b) => to24h(a.startTime).localeCompare(to24h(b.startTime)))
       for (let i = 1; i < activeSlots.length; i++) {
-        if (activeSlots[i].startTime < activeSlots[i - 1].endTime) {
+        if (to24h(activeSlots[i].startTime) < to24h(activeSlots[i - 1].endTime)) {
           toast.error(`"${activeSlots[i].name}" overlaps with "${activeSlots[i - 1].name}"`)
           return
         }
@@ -185,9 +205,18 @@ export default function GymSlotsPage() {
           return (
             <Card key={day}>
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <CardTitle className="text-base">{dayLabel}</CardTitle>
                   <div className="flex items-center gap-2">
+                    <Select value={timeFormat} onValueChange={handleTimeFormatChange}>
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue placeholder="Time Format" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="12h">12 Hour (AM/PM)</SelectItem>
+                        <SelectItem value="24h">24 Hour</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Button
                       variant={dayData.isClosed ? "destructive" : "outline"}
                       size="sm"
@@ -238,7 +267,7 @@ export default function GymSlotsPage() {
                         <Label className="text-xs">Start</Label>
                         <Input
                           type="time"
-                          value={slot.startTime}
+                          value={toDisplay(slot.startTime)}
                           onChange={(e) =>
                             updateSlot(day, slot.id, "startTime", e.target.value)
                           }
@@ -249,7 +278,7 @@ export default function GymSlotsPage() {
                         <Label className="text-xs">End</Label>
                         <Input
                           type="time"
-                          value={slot.endTime}
+                          value={toDisplay(slot.endTime)}
                           onChange={(e) =>
                             updateSlot(day, slot.id, "endTime", e.target.value)
                           }

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { PlatformSettings, getOrCreateSettings } from "./platformSettings.model";
+import { TimeFormat } from "@/types/payout.types";
 import logger from "@/utils/logger";
 
 // GET /platform-settings
@@ -16,7 +17,7 @@ export const getPlatformSettings = async (req: Request, res: Response) => {
 // PATCH /platform-settings
 export const updatePlatformSettings = async (req: Request, res: Response) => {
   try {
-    const { defaultCommissionRate, defaultPayoutSchedule, minimumPayoutAmount, isAutoPayout } = req.body;
+    const { defaultCommissionRate, defaultPayoutSchedule, minimumPayoutAmount, isAutoPayout, timeFormat } = req.body;
 
     const settings = await getOrCreateSettings();
 
@@ -29,6 +30,12 @@ export const updatePlatformSettings = async (req: Request, res: Response) => {
     if (defaultPayoutSchedule !== undefined) settings.defaultPayoutSchedule = defaultPayoutSchedule;
     if (minimumPayoutAmount !== undefined) settings.minimumPayoutAmount = minimumPayoutAmount;
     if (isAutoPayout !== undefined) settings.isAutoPayout = isAutoPayout;
+    if (timeFormat !== undefined) {
+      if (!Object.values(TimeFormat).includes(timeFormat)) {
+        return res.status(400).json({ success: false, message: "Invalid time format" });
+      }
+      settings.timeFormat = timeFormat;
+    }
 
     await settings.save();
 

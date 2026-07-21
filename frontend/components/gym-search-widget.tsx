@@ -17,9 +17,6 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { searchGyms, searchGymsByLocation } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  Autocomplete,
-} from "@react-google-maps/api";
 import { useGoogleMaps } from "@/components/google-maps-provider";
 import {
   calculateDistance,
@@ -27,6 +24,7 @@ import {
   saveLocation,
   type UserLocation,
 } from "@/lib/user-location";
+import { PlaceAutocomplete } from "@/components/place-autocomplete";
 
 const getDayOfWeek = () => {
   const days = [
@@ -82,8 +80,6 @@ export default function GymSearchWidget() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userCoordinates, setUserCoordinates] = useState<{ lat: number; lng: number } | null>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Scroll state
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -236,17 +232,14 @@ export default function GymSearchWidget() {
     }
   };
 
-  const handlePlaceSelect = async () => {
-    if (!autocompleteRef.current) return;
-    const place = autocompleteRef.current.getPlace();
-    if (place.geometry?.location) {
-      const lat = place.geometry.location.lat();
-      const lng = place.geometry.location.lng();
-      const label = place.formatted_address || place.name || "Selected Location";
+  const handlePlaceSelect = async (place: google.maps.places.Place) => {
+    if (place.location) {
+      const lat = place.location.lat();
+      const lng = place.location.lng();
+      const label = place.formattedAddress || place.displayName || "Selected Location";
       setUserCoordinates({ lat, lng });
       setLocation(label);
       saveLocation({ lat, lng, label, timestamp: Date.now() });
-      if (inputRef.current) inputRef.current.value = "";
       await searchNearby(lat, lng);
     }
   };
@@ -286,23 +279,11 @@ export default function GymSearchWidget() {
           <div className="flex items-center gap-2">
             <div className="flex-1">
               {isLoaded ? (
-                <Autocomplete
-                  onLoad={(ac) => (autocompleteRef.current = ac)}
-                  onPlaceChanged={handlePlaceSelect}
+                <PlaceAutocomplete
+                  onPlaceSelect={handlePlaceSelect}
+                  placeholder="Search area, city, or landmark..."
                   options={{ componentRestrictions: { country: "in" } }}
-                >
-                  <div className="flex items-center bg-white rounded-xl border border-gray-200 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all">
-                    <div className="pl-3 sm:pl-4 pr-2 text-blue-900">
-                      <Search className="h-5 w-5" />
-                    </div>
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      placeholder="Search area, city, or landmark..."
-                      className="flex-1 py-3 sm:py-4 px-2 bg-transparent border-0 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0 text-sm sm:text-base min-w-0"
-                    />
-                  </div>
-                </Autocomplete>
+                />
               ) : (
                 <div className="flex items-center bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 sm:py-4">
                   <Loader2 className="h-4 w-4 animate-spin mr-2 text-gray-400" />

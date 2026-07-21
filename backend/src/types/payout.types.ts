@@ -13,6 +13,11 @@ export enum PayoutSchedule {
   MONTHLY = "monthly",
 }
 
+export enum TimeFormat {
+  TWELVE_HOUR = "12h",
+  TWENTY_FOUR_HOUR = "24h",
+}
+
 export interface IPayout extends Document {
   _id: Types.ObjectId;
   gymOwnerId: Types.ObjectId;
@@ -40,6 +45,7 @@ export interface IPlatformSettings extends Document {
   defaultPayoutSchedule: PayoutSchedule;
   minimumPayoutAmount: number;
   isAutoPayout: boolean;
+  timeFormat: TimeFormat;
   createdAt: Date;
   updatedAt: Date;
 }

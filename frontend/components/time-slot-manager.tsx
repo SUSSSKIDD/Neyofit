@@ -18,6 +18,7 @@ import {
   AlertCircle
 } from "lucide-react"
 import { TimeSlot, DaySchedule, generateSlotId } from "@/lib/api"
+import { formatTime, parseTimeTo24, getDefaultTimeFormat, saveTimeFormat, TimeFormat } from "@/lib/utils"
 
 interface TimeSlotManagerProps {
   daySchedule: DaySchedule
@@ -30,6 +31,12 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
   const [newSlotName, setNewSlotName] = useState("")
   const [newSlotStartTime, setNewSlotStartTime] = useState("09:00")
   const [newSlotEndTime, setNewSlotEndTime] = useState("21:00")
+  const [timeFormat, setTimeFormat] = useState<TimeFormat>(() => getDefaultTimeFormat())
+
+  // Convert display time to 24h for storage
+  const to24h = (time: string) => parseTimeTo24(time)
+  // Convert 24h storage to display format
+  const toDisplay = (time: string) => formatTime(time, timeFormat)
 
   const addNewSlot = () => {
     if (!newSlotName.trim()) return
@@ -37,8 +44,8 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
     const newSlot: TimeSlot = {
       id: generateSlotId(),
       name: newSlotName.trim(),
-      startTime: newSlotStartTime,
-      endTime: newSlotEndTime,
+      startTime: to24h(newSlotStartTime),
+      endTime: to24h(newSlotEndTime),
       isActive: true
     }
 
@@ -54,10 +61,15 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
   }
 
   const updateSlot = (slotId: string, updates: Partial<TimeSlot>) => {
+    // Convert time fields to 24h for storage
+    const processedUpdates = { ...updates }
+    if (updates.startTime) processedUpdates.startTime = to24h(updates.startTime)
+    if (updates.endTime) processedUpdates.endTime = to24h(updates.endTime)
+
     const updatedSchedule = {
       ...daySchedule,
       slots: daySchedule.slots.map(slot =>
-        slot.id === slotId ? { ...slot, ...updates } : slot
+        slot.id === slotId ? { ...slot, ...processedUpdates } : slot
       )
     }
     onUpdate(updatedSchedule)
@@ -72,7 +84,10 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
   }
 
   const toggleSlotActive = (slotId: string) => {
-    updateSlot(slotId, { isActive: !daySchedule.slots.find(s => s.id === slotId)?.isActive })
+    const slot = daySchedule.slots.find(s => s.id === slotId)
+    if (slot) {
+      updateSlot(slotId, { isActive: !slot.isActive })
+    }
   }
 
   const toggleDayClosed = () => {
@@ -84,7 +99,7 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
 
   const validateTimeSlot = (startTime: string, endTime: string): boolean => {
     if (!startTime || !endTime) return false
-    return startTime < endTime
+    return to24h(startTime) < to24h(endTime)
   }
 
   const getSlotStatusColor = (slot: TimeSlot) => {
@@ -97,6 +112,11 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
     if (!slot.isActive) return "Inactive"
     if (!validateTimeSlot(slot.startTime, slot.endTime)) return "Invalid Time"
     return "Active"
+  }
+
+  const handleTimeFormatChange = (format: TimeFormat) => {
+    setTimeFormat(format)
+    saveTimeFormat(format)
   }
 
   return (
@@ -114,6 +134,15 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
               />
               <span className="text-sm">Closed</span>
             </Label>
+            <Select value={timeFormat} onValueChange={handleTimeFormatChange}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Time Format" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="12h">12 Hour (AM/PM)</SelectItem>
+                <SelectItem value="24h">24 Hour</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </CardHeader>
@@ -140,13 +169,13 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
                       />
                       <Input
                         type="time"
-                        value={slot.startTime}
+                        value={toDisplay(slot.startTime)}
                         onChange={(e) => updateSlot(slot.id, { startTime: e.target.value })}
                         className="text-sm"
                       />
                       <Input
                         type="time"
-                        value={slot.endTime}
+                        value={toDisplay(slot.endTime)}
                         onChange={(e) => updateSlot(slot.id, { endTime: e.target.value })}
                         className="text-sm"
                       />
@@ -178,7 +207,7 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
                         </div>
                         <div className="flex items-center gap-1 text-sm text-gray-600">
                           <Clock className="h-3 w-3" />
-                          {slot.startTime} - {slot.endTime}
+                          {toDisplay(slot.startTime)} - {toDisplay(slot.endTime)}
                         </div>
                       </div>
                       <div className="flex gap-1">
@@ -222,26 +251,26 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
                 />
                 <Input
                   type="time"
-                  value={newSlotStartTime}
+                  value={toDisplay(newSlotStartTime)}
                   onChange={(e) => setNewSlotStartTime(e.target.value)}
                   className="text-sm"
                 />
                 <Input
                   type="time"
-                  value={newSlotEndTime}
+                  value={toDisplay(newSlotEndTime)}
                   onChange={(e) => setNewSlotEndTime(e.target.value)}
                   className="text-sm"
                 />
                 <Button
                   onClick={addNewSlot}
-                  disabled={!newSlotName.trim() || !validateTimeSlot(newSlotStartTime, newSlotEndTime)}
+                  disabled={!newSlotName.trim() || !validateTimeSlot(toDisplay(newSlotStartTime), toDisplay(newSlotEndTime))}
                   className="text-sm"
                 >
                   <Plus className="h-3 w-3 mr-1" />
                   Add Slot
                 </Button>
               </div>
-              {!validateTimeSlot(newSlotStartTime, newSlotEndTime) && (
+              {!validateTimeSlot(toDisplay(newSlotStartTime), toDisplay(newSlotEndTime)) && (
                 <p className="text-xs text-red-500 mt-1">
                   End time must be after start time
                 </p>

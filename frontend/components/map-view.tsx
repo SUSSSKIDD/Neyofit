@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useCallback, useRef } from "react"
-import { GoogleMap, Marker, InfoWindow } from "@react-google-maps/api"
+import { GoogleMap, InfoWindow } from "@react-google-maps/api"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Star, MapPin } from "lucide-react"
 import Link from "next/link"
 import { useGoogleMaps } from "@/components/google-maps-provider"
+import { AdvancedMarkerElement, createPinElement, createUserPinElement } from "@/components/advanced-marker"
 
 interface Gym {
   id: string
@@ -79,37 +80,31 @@ export default function MapView({ gyms, userLocation }: MapViewProps) {
     >
       {/* User location marker */}
       {userLocation && (
-        <Marker
+        <AdvancedMarkerElement
           position={userLocation}
-          icon={{
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
-            fillColor: "#3B82F6",
-            fillOpacity: 1,
-            strokeColor: "#ffffff",
-            strokeWeight: 3,
-          }}
           title="Your Location"
-        />
+        >
+          {createUserPinElement()}
+        </AdvancedMarkerElement>
       )}
 
       {/* Gym markers */}
       {gyms.map((gym) =>
         gym.coordinates?.lat && gym.coordinates?.lng ? (
-          <Marker
+          <AdvancedMarkerElement
             key={gym.id}
             position={gym.coordinates}
             onClick={() => setSelectedGym(gym)}
-            icon={{
-              path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
-              fillColor: selectedGym?.id === gym.id ? "#1E3A8A" : "#F97316",
-              fillOpacity: 1,
-              strokeColor: "#ffffff",
-              strokeWeight: 2,
-              scale: 1.5,
-              anchor: new google.maps.Point(12, 24),
-            }}
-          />
+            title={gym.name}
+            zIndex={selectedGym?.id === gym.id ? 100 : 1}
+          >
+            {createPinElement(
+              selectedGym?.id === gym.id ? "#1E3A8A" : "#F97316",
+              36,
+              "#ffffff",
+              3
+            )}
+          </AdvancedMarkerElement>
         ) : null
       )}
 

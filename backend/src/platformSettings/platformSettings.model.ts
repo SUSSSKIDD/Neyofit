@@ -1,5 +1,5 @@
 import { Schema, model } from "mongoose";
-import { IPlatformSettings, PayoutSchedule } from "@/types/payout.types";
+import { IPlatformSettings, PayoutSchedule, TimeFormat } from "@/types/payout.types";
 
 const platformSettingsSchema = new Schema<IPlatformSettings>(
   {
@@ -11,6 +11,11 @@ const platformSettingsSchema = new Schema<IPlatformSettings>(
     },
     minimumPayoutAmount: { type: Number, required: true, default: 500 },
     isAutoPayout: { type: Boolean, default: false },
+    timeFormat: {
+      type: String,
+      enum: Object.values(TimeFormat),
+      default: TimeFormat.TWENTY_FOUR_HOUR,
+    },
   },
   { timestamps: true }
 );
@@ -29,6 +34,7 @@ export async function getOrCreateSettings(): Promise<IPlatformSettings> {
       defaultPayoutSchedule: PayoutSchedule.MONTHLY,
       minimumPayoutAmount: 500,
       isAutoPayout: false,
+      timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
     });
   }
   return settings;

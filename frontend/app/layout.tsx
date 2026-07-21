@@ -15,13 +15,16 @@ export const viewport = {
 
 export const metadata: Metadata = {
   title: 'Welcome to Neyofit',
-  description: 'Welcome to Neyofit',
+  description: 'Your ultimate fitness platform. Flexible gym passes - no contracts, no commitments.',
   generator: 'Neyofit',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'Neyofit',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
   },
 }
 

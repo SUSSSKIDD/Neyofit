@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import {
   GoogleMap,
   Marker,
-  Autocomplete,
 } from "@react-google-maps/api";
 import { Button } from "@/components/ui/button";
 import { MapPin, Loader2, LocateFixed, X, Search, ChevronDown } from "lucide-react";
@@ -15,6 +14,7 @@ import {
   type UserLocation,
 } from "@/lib/user-location";
 import { useGoogleMaps } from "@/components/google-maps-provider";
+import { PlaceAutocomplete } from "@/components/place-autocomplete";
 
 const defaultCenter = { lat: 28.6139, lng: 77.209 };
 
@@ -39,7 +39,6 @@ export default function CustomerLocationPicker({
   const [markerPosition, setMarkerPosition] = useState(defaultCenter);
   const [locationLabel, setLocationLabel] = useState("");
   const [detecting, setDetecting] = useState(false);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -213,20 +212,11 @@ export default function CustomerLocationPicker({
             {/* Top bar: search + current location + close */}
             <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-white z-10">
               <div className="flex-1">
-                <Autocomplete
-                  onLoad={(ac) => (autocompleteRef.current = ac)}
-                  onPlaceChanged={handlePlaceSelect}
+                <PlaceAutocomplete
+                  onPlaceSelect={handlePlaceSelect}
+                  placeholder="Search a place..."
                   options={{ componentRestrictions: { country: "in" } }}
-                >
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search a place..."
-                      className="w-full h-11 pl-10 pr-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </Autocomplete>
+                />
               </div>
               <Button
                 variant="outline"
@@ -318,20 +308,11 @@ export default function CustomerLocationPicker({
       <div className="space-y-3">
         <div className="flex gap-2">
           <div className="flex-1">
-            <Autocomplete
-              onLoad={(ac) => (autocompleteRef.current = ac)}
-              onPlaceChanged={handlePlaceSelect}
+            <PlaceAutocomplete
+              onPlaceSelect={handlePlaceSelect}
+              placeholder="Search a place..."
               options={{ componentRestrictions: { country: "in" } }}
-            >
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search a place..."
-                  className="w-full h-10 pl-9 pr-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </Autocomplete>
+            />
           </div>
           <Button
             variant="outline"

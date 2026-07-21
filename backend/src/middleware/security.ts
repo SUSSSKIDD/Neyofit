@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 
-// Content Security Policy
+// Content Security Policy - Allow all required Google Maps domains
 const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.razorpay.com https://maps.googleapis.com https://checkout.razorpay.com",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
-    "img-src 'self' data: https: blob:",
-    "connect-src 'self' https://api.razorpay.com https://maps.googleapis.com https://*.googleapis.com wss://*.neyofit.in",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.razorpay.com https://maps.googleapis.com https://maps.gstatic.com https://apis.google.com https://checkout.razorpay.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://maps.googleapis.com https://maps.gstatic.com",
+    "font-src 'self' https://fonts.gstatic.com https://maps.gstatic.com data:",
+    "img-src 'self' data: https: blob: https://maps.googleapis.com https://maps.gstatic.com https://lh3.googleusercontent.com https://*.googleusercontent.com https://*.ggpht.com",
+    "connect-src 'self' https://api.razorpay.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com wss://*.neyofit.in",
     "frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
@@ -17,6 +17,21 @@ const cspDirectives = [
     "object-src 'none'",
     "worker-src 'self' blob:",
 ].join('; ');
+
+// Permissions Policy - Only standard features, no Privacy Sandbox experimental features
+const permissionsPolicy = [
+    'accelerometer=()',
+    'camera=()',
+    'geolocation=(self)',
+    'gyroscope=()',
+    'magnetometer=()',
+    'microphone=()',
+    'payment=(self "https://api.razorpay.com")',
+    'usb=()',
+    'display-capture=()',
+    'fullscreen=(self)',
+    'picture-in-picture=()',
+].join(', ');
 
 export const securityHeaders = (req: Request, res: Response, next: NextFunction) => {
     // Check production at request time, not module load time
@@ -46,21 +61,11 @@ export const securityHeaders = (req: Request, res: Response, next: NextFunction)
     res.setHeader('Content-Security-Policy', cspDirectives);
 
     // Permissions Policy (formerly Feature Policy)
-    res.setHeader('Permissions-Policy', [
-        'accelerometer=()',
-        'camera=()',
-        'geolocation=()',
-        'gyroscope=()',
-        'magnetometer=()',
-        'microphone=()',
-        'payment=(self "https://api.razorpay.com")',
-        'usb=()',
-        'display-capture=()'
-    ].join(', '));
+    res.setHeader('Permissions-Policy', permissionsPolicy);
 
     // Cross-Origin policies
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
 
     // Cache control for sensitive endpoints

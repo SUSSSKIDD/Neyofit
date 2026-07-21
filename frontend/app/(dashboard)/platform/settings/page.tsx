@@ -247,6 +247,7 @@ function CommissionTab() {
     defaultCommissionRate: 15,
     defaultPayoutSchedule: "monthly" as "weekly" | "biweekly" | "monthly",
     minimumPayoutAmount: 500,
+    timeFormat: "24h" as "12h" | "24h",
   });
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -261,6 +262,7 @@ function CommissionTab() {
             defaultCommissionRate: response.data.defaultCommissionRate,
             defaultPayoutSchedule: response.data.defaultPayoutSchedule,
             minimumPayoutAmount: response.data.minimumPayoutAmount,
+            timeFormat: response.data.timeFormat || "24h",
           });
         }
       } catch {
@@ -352,6 +354,24 @@ function CommissionTab() {
               setSettingsForm((f) => ({ ...f, minimumPayoutAmount: Number(e.target.value) }))
             }
           />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="timeFormat">Time Format</Label>
+          <select
+            id="timeFormat"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={settingsForm.timeFormat}
+            onChange={(e) =>
+              setSettingsForm((f) => ({
+                ...f,
+                timeFormat: e.target.value as "12h" | "24h",
+              }))
+            }
+          >
+            <option value="12h">12 Hour (AM/PM)</option>
+            <option value="24h">24 Hour</option>
+          </select>
+          <p className="text-xs text-muted-foreground">Applied across the platform for displaying time slots</p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
           {saving ? "Saving..." : "Save Settings"}

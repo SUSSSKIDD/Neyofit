@@ -100,7 +100,7 @@ export const getGymPictureMetadata = async (
 	}
 };
 
-// Get the image file itself
+// Get the image file itself - proxy external images to avoid CORS issues
 export const getGymPictureImage = async (
 	req: Request<{ id: string }>,
 	res: Response
@@ -109,9 +109,32 @@ export const getGymPictureImage = async (
 		const picture = await GymPicture.findById(req.params.id);
 		if (!picture) return res.status(404).send("Image not found");
 
-		// If it's a URL-based image, redirect to the URL
+		// If it's a URL-based image, proxy the request to avoid CORS issues
 		if (picture.imageUrl) {
-			return res.redirect(picture.imageUrl);
+			try {
+				const response = await fetch(picture.imageUrl, {
+					headers: {
+						'User-Agent': 'Mozilla/5.0 (compatible; Neyofit/1.0)',
+					},
+				});
+
+				if (!response.ok) {
+					throw new Error(`Failed to fetch image: ${response.status}`);
+				}
+
+				const contentType = response.headers.get('content-type') || picture.imageType || 'image/jpeg';
+				const buffer = await response.arrayBuffer();
+
+				res.set('Content-Type', contentType);
+				res.set('Cache-Control', 'public, max-age=31536000, immutable');
+				res.set('Access-Control-Allow-Origin', '*');
+				res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+
+				return res.send(Buffer.from(buffer));
+			} catch (fetchError) {
+				console.error('Error proxying image:', fetchError);
+				return res.status(502).send("Error fetching external image");
+			}
 		}
 
 		// Serve from disk
@@ -120,6 +143,9 @@ export const getGymPictureImage = async (
 		}
 
 		res.set("Content-Type", picture.imageType);
+		res.set('Cache-Control', 'public, max-age=31536000, immutable');
+		res.set('Access-Control-Allow-Origin', '*');
+		res.set('Cross-Origin-Resource-Policy', 'cross-origin');
 		res.sendFile(path.resolve(picture.filePath));
 	} catch (error) {
 		res.status(500).send("Error retrieving image");

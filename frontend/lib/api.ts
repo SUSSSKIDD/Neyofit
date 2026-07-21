@@ -323,6 +323,7 @@ export interface PlatformSettingsData {
   defaultPayoutSchedule: "weekly" | "biweekly" | "monthly";
   minimumPayoutAmount: number;
   isAutoPayout: boolean;
+  timeFormat?: "12h" | "24h";
 }
 
 export interface GymOwnerEarningsSummary {
@@ -1774,6 +1775,30 @@ class ApiService {
       headers: { "Content-Type": "application/json" },
       credentials: 'include',
       body: JSON.stringify({ notes }),
+    });
+    return response.json();
+  }
+
+  // Gym Slots API methods
+  async getGymSlots(gymId: string): Promise<ApiResponse<GymSlotData[]>> {
+    const response = await fetch(`${this.baseURL}/gym-slots/${gymId}`, {
+      method: "GET",
+      credentials: 'include',
+    });
+    return response.json();
+  }
+
+  async createOrUpdateGymSlots(
+    gymId: string,
+    dayOfWeek: string,
+    slots: TimeSlot[],
+    isClosed: boolean
+  ): Promise<ApiResponse<{ gymSlot: any }>> {
+    const response = await fetch(`${this.baseURL}/gym-slots/${gymId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
+      body: JSON.stringify({ dayOfWeek, slots, isClosed }),
     });
     return response.json();
   }
