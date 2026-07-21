@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load environment variables from the correct path
-dotenv.config({ path: '.env' });
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 import connectDB from '@/config/database.js';
 import corsMiddleware from '@/middleware/cors.js';
