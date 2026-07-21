@@ -7,7 +7,7 @@ const cspDirectives = [
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://maps.googleapis.com https://maps.gstatic.com",
     "font-src 'self' https://fonts.gstatic.com https://maps.gstatic.com data:",
     "img-src 'self' data: https: blob: https://maps.googleapis.com https://maps.gstatic.com https://lh3.googleusercontent.com https://*.googleusercontent.com https://*.ggpht.com",
-    "connect-src 'self' https://api.razorpay.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com wss://*.neyofit.in",
+    "connect-src 'self' https://api.razorpay.com https://maps.googleapis.com https://*.googleapis.com https://*.google.com https://maps.googleapis.com/maps/api/mapsjs/gen_204 wss://*.neyofit.in",
     "frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",

@@ -22,9 +22,19 @@ export function PlaceAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null)
   const autocompleteRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [useLegacy, setUseLegacy] = useState(false)
 
   useEffect(() => {
     if (!isLoaded || !inputRef.current || autocompleteRef.current) return
+
+    // Check if the new element is supported
+    const supportsNewElement = "gmp-place-autocomplete" in window.customElements ||
+      typeof document.createElement("gmp-place-autocomplete") === "object"
+
+    if (!supportsNewElement) {
+      setUseLegacy(true)
+      return
+    }
 
     // Create the new PlaceAutocompleteElement
     const autocompleteElement = document.createElement(
@@ -32,7 +42,12 @@ export function PlaceAutocomplete({
     ) as google.maps.places.PlaceAutocompleteElement
 
     autocompleteElement.placeholder = placeholder
-    autocompleteElement.componentRestrictions = componentRestrictions
+    // New API uses locationRestriction instead of componentRestrictions
+    if (componentRestrictions?.country) {
+      autocompleteElement.locationRestriction = {
+        country: componentRestrictions.country
+      }
+    }
     autocompleteElement.disabled = disabled
 
     // Insert after the input
@@ -81,6 +96,17 @@ export function PlaceAutocomplete({
         />
       </div>
     )
+  }
+
+  // Use legacy autocomplete if new element not supported
+  if (useLegacy) {
+    return <LegacyPlaceAutocomplete
+      onPlaceSelect={onPlaceSelect}
+      placeholder={placeholder}
+      className={className}
+      disabled={disabled}
+      componentRestrictions={componentRestrictions}
+    />
   }
 
   return (
