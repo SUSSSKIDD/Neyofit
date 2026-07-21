@@ -61,6 +61,17 @@ import { toast } from "sonner";
 // ────────────────────────────────────────
 // Indian States list for Location form
 // ────────────────────────────────────────
+const emptyLocationForm = {
+  name: "",
+  street: "",
+  city: "",
+  state: "",
+  pinCode: "",
+  country: "India",
+  latitude: "",
+  longitude: "",
+};
+
 const INDIAN_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
   "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand",
@@ -72,16 +83,62 @@ const INDIAN_STATES = [
   "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry",
 ];
 
-const emptyLocationForm = {
-  name: "",
-  street: "",
-  city: "",
-  state: "",
-  pinCode: "",
-  country: "India",
-  latitude: "",
-  longitude: "",
-};
+// LocationForm moved outside to prevent remounting on every render
+const LocationForm = ({
+  data,
+  setData,
+}: {
+  data: typeof emptyLocationForm;
+  setData: React.Dispatch<React.SetStateAction<typeof emptyLocationForm>>;
+}) => (
+  <div className="grid gap-4 py-4">
+    <div className="space-y-2">
+      <Label>Name *</Label>
+      <Input value={data.name} onChange={(e) => setData((prev) => ({ ...prev, name: e.target.value }))} placeholder="Location name" />
+    </div>
+    <div className="space-y-2">
+      <Label>Street</Label>
+      <Input value={data.street} onChange={(e) => setData((prev) => ({ ...prev, street: e.target.value }))} placeholder="Street address" />
+    </div>
+    <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-2">
+        <Label>City *</Label>
+        <Input value={data.city} onChange={(e) => setData((prev) => ({ ...prev, city: e.target.value }))} placeholder="City" />
+      </div>
+      <div className="space-y-2">
+        <Label>State *</Label>
+        <Select value={data.state} onValueChange={(val) => setData((prev) => ({ ...prev, state: val }))}>
+          <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+          <SelectContent className="max-h-[200px]">
+            {INDIAN_STATES.map((state) => (
+              <SelectItem key={state} value={state}>{state}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-2">
+        <Label>Pin Code</Label>
+        <Input value={data.pinCode} onChange={(e) => setData((prev) => ({ ...prev, pinCode: e.target.value }))} placeholder="110001" />
+      </div>
+      <div className="space-y-2">
+        <Label>Country</Label>
+        <Input value={data.country} disabled />
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-2">
+        <Label>Latitude</Label>
+        <Input type="number" step="any" value={data.latitude} onChange={(e) => setData((prev) => ({ ...prev, latitude: e.target.value }))} placeholder="28.6139" />
+      </div>
+      <div className="space-y-2">
+        <Label>Longitude</Label>
+        <Input type="number" step="any" value={data.longitude} onChange={(e) => setData((prev) => ({ ...prev, longitude: e.target.value }))} placeholder="77.2090" />
+      </div>
+    </div>
+  </div>
+);
 
 interface Facility {
   _id: string;
@@ -514,62 +571,6 @@ function LocationsTab() {
       setDeleting(null);
     }
   };
-
-  const LocationForm = ({
-    data,
-    setData,
-  }: {
-    data: typeof emptyLocationForm;
-    setData: React.Dispatch<React.SetStateAction<typeof emptyLocationForm>>;
-  }) => (
-    <div className="grid gap-4 py-4">
-      <div className="space-y-2">
-        <Label>Name *</Label>
-        <Input value={data.name} onChange={(e) => setData((prev) => ({ ...prev, name: e.target.value }))} placeholder="Location name" />
-      </div>
-      <div className="space-y-2">
-        <Label>Street</Label>
-        <Input value={data.street} onChange={(e) => setData((prev) => ({ ...prev, street: e.target.value }))} placeholder="Street address" />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label>City *</Label>
-          <Input value={data.city} onChange={(e) => setData((prev) => ({ ...prev, city: e.target.value }))} placeholder="City" />
-        </div>
-        <div className="space-y-2">
-          <Label>State *</Label>
-          <Select value={data.state} onValueChange={(val) => setData((prev) => ({ ...prev, state: val }))}>
-            <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
-            <SelectContent className="max-h-[200px]">
-              {INDIAN_STATES.map((state) => (
-                <SelectItem key={state} value={state}>{state}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label>Pin Code</Label>
-          <Input value={data.pinCode} onChange={(e) => setData((prev) => ({ ...prev, pinCode: e.target.value }))} placeholder="110001" />
-        </div>
-        <div className="space-y-2">
-          <Label>Country</Label>
-          <Input value={data.country} disabled />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label>Latitude</Label>
-          <Input type="number" step="any" value={data.latitude} onChange={(e) => setData((prev) => ({ ...prev, latitude: e.target.value }))} placeholder="28.6139" />
-        </div>
-        <div className="space-y-2">
-          <Label>Longitude</Label>
-          <Input type="number" step="any" value={data.longitude} onChange={(e) => setData((prev) => ({ ...prev, longitude: e.target.value }))} placeholder="77.2090" />
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <>
