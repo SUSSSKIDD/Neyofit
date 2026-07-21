@@ -14,7 +14,7 @@ const platformSettingsSchema = new Schema<IPlatformSettings>(
     timeFormat: {
       type: String,
       enum: Object.values(TimeFormat),
-      default: TimeFormat.TWENTY_FOUR_HOUR,
+      default: TimeFormat.TWELVE_HOUR,
     },
   },
   { timestamps: true }
@@ -34,7 +34,7 @@ export async function getOrCreateSettings(): Promise<IPlatformSettings> {
       defaultPayoutSchedule: PayoutSchedule.MONTHLY,
       minimumPayoutAmount: 500,
       isAutoPayout: false,
-      timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
+      timeFormat: TimeFormat.TWELVE_HOUR,
     });
   }
   return settings;

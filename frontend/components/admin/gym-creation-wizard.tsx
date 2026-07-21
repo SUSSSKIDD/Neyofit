@@ -38,6 +38,7 @@ import {
   CreditCard,
   Star,
 } from "lucide-react";
+import { TimePicker } from "@/components/ui/time-picker"
 import {
   apiService,
   Gym,
@@ -923,27 +924,25 @@ export default function GymCreationWizard({
                                 }
                                 placeholder="Slot name"
                               />
-                              <Input
-                                type="time"
+                              <TimePicker
                                 value={slot.startTime}
-                                onChange={(e) =>
+                                onChange={(time) =>
                                   updateTimeSlot(
                                     day as keyof OpeningHours,
                                     slotIndex,
                                     "startTime",
-                                    e.target.value
+                                    time
                                   )
                                 }
                               />
-                              <Input
-                                type="time"
+                              <TimePicker
                                 value={slot.endTime}
-                                onChange={(e) =>
+                                onChange={(time) =>
                                   updateTimeSlot(
                                     day as keyof OpeningHours,
                                     slotIndex,
                                     "endTime",
-                                    e.target.value
+                                    time
                                   )
                                 }
                               />

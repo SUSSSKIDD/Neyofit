@@ -6,9 +6,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Time format types
+ * Time format - only 12-hour format supported now
  */
-export type TimeFormat = '12h' | '24h'
+export type TimeFormat = '12h'
 
 /**
  * Convert 24-hour time string to 12-hour format
@@ -42,15 +42,14 @@ export function time12to24(time12: string): string {
 }
 
 /**
- * Format time based on the selected format
+ * Format time based on the selected format (always 12h now)
  * @param time - Time string (24h format "HH:mm")
- * @param format - Target format ('12h' or '24h')
+ * @param format - Target format (always '12h')
  * @returns Formatted time string
  */
-export function formatTime(time: string, format: TimeFormat): string {
+export function formatTime(time: string, format: TimeFormat = '12h'): string {
   if (!time) return ''
-  if (format === '12h') return time24to12(time)
-  return time
+  return time24to12(time)
 }
 
 /**
@@ -67,14 +66,10 @@ export function parseTimeTo24(time: string): string {
 }
 
 /**
- * Get default time format from localStorage or system preference
+ * Get default time format (always 12h)
  */
 export function getDefaultTimeFormat(): TimeFormat {
-  if (typeof window === 'undefined') return '24h'
-  const stored = localStorage.getItem('timeFormat') as TimeFormat
-  if (stored) return stored
-  // Check system locale preference
-  return navigator.language.startsWith('en-US') ? '12h' : '24h'
+  return '12h'
 }
 
 /**

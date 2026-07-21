@@ -21,8 +21,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { formatTime, parseTimeTo24, getDefaultTimeFormat, saveTimeFormat, TimeFormat } from "@/lib/utils"
+import { TimePicker } from "@/components/ui/time-picker"
+import { formatTime, parseTimeTo24 } from "@/lib/utils"
 
 const DAYS_OF_WEEK = [
   "monday",
@@ -48,17 +48,11 @@ export default function GymSlotsPage() {
   const [loading, setLoading] = useState(true)
   const [savingDay, setSavingDay] = useState<string | null>(null)
   const [week, setWeek] = useState<WeekState>({})
-  const [timeFormat, setTimeFormat] = useState<TimeFormat>(() => getDefaultTimeFormat())
 
   // Convert display time to 24h for storage
   const to24h = (time: string) => parseTimeTo24(time)
-  // Convert 24h storage to display format
-  const toDisplay = (time: string) => formatTime(time, timeFormat)
-
-  const handleTimeFormatChange = (format: TimeFormat) => {
-    setTimeFormat(format)
-    saveTimeFormat(format)
-  }
+  // Convert 24h storage to 12h display format
+  const toDisplay = (time: string) => formatTime(time)
 
   useEffect(() => {
     async function fetchSlots() {
@@ -124,8 +118,8 @@ export default function GymSlotsPage() {
 
   const updateSlot = (day: string, slotId: string, field: keyof TimeSlot, value: string | boolean) => {
     // Convert time fields to 24h for storage
-    const processedValue = (field === "startTime" || field === "endTime") 
-      ? to24h(value as string) 
+    const processedValue = (field === "startTime" || field === "endTime")
+      ? to24h(value as string)
       : value
 
     setWeek((prev) => ({
@@ -208,15 +202,6 @@ export default function GymSlotsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <CardTitle className="text-base">{dayLabel}</CardTitle>
                   <div className="flex items-center gap-2">
-                    <Select value={timeFormat} onValueChange={handleTimeFormatChange}>
-                      <SelectTrigger className="w-[160px]">
-                        <SelectValue placeholder="Time Format" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="12h">12 Hour (AM/PM)</SelectItem>
-                        <SelectItem value="24h">24 Hour</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <Button
                       variant={dayData.isClosed ? "destructive" : "outline"}
                       size="sm"
@@ -263,26 +248,24 @@ export default function GymSlotsPage() {
                           className="h-8"
                         />
                       </div>
-                      <div className="w-28 space-y-1">
+                      <div className="w-40 space-y-1">
                         <Label className="text-xs">Start</Label>
-                        <Input
-                          type="time"
+                        <TimePicker
                           value={toDisplay(slot.startTime)}
-                          onChange={(e) =>
-                            updateSlot(day, slot.id, "startTime", e.target.value)
+                          onChange={(time) =>
+                            updateSlot(day, slot.id, "startTime", time)
                           }
-                          className="h-8"
+                          className="w-full"
                         />
                       </div>
-                      <div className="w-28 space-y-1">
+                      <div className="w-40 space-y-1">
                         <Label className="text-xs">End</Label>
-                        <Input
-                          type="time"
+                        <TimePicker
                           value={toDisplay(slot.endTime)}
-                          onChange={(e) =>
-                            updateSlot(day, slot.id, "endTime", e.target.value)
+                          onChange={(time) =>
+                            updateSlot(day, slot.id, "endTime", time)
                           }
-                          className="h-8"
+                          className="w-full"
                         />
                       </div>
                       <Button

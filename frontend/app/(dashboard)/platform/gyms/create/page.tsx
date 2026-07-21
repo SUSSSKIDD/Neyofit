@@ -39,6 +39,7 @@ import {
   Building2,
   Search,
 } from "lucide-react";
+import { TimePicker } from "@/components/ui/time-picker";
 import {
   apiService,
   Gym,
@@ -427,9 +428,17 @@ export default function CreateGymPage() {
                       {schedule.slots.map((slot: TimeSlot, idx: number) => (
                         <div key={slot.id} className="flex items-center gap-2">
                           <Input className="w-28" value={slot.name} onChange={(e) => updateSlot(day as keyof OpeningHours, idx, "name", e.target.value)} placeholder="Slot" />
-                          <Input className="w-28" type="time" value={slot.startTime} onChange={(e) => updateSlot(day as keyof OpeningHours, idx, "startTime", e.target.value)} />
+                          <TimePicker
+                            value={slot.startTime}
+                            onChange={(time) => updateSlot(day as keyof OpeningHours, idx, "startTime", time)}
+                            className="w-28"
+                          />
                           <span className="text-muted-foreground">to</span>
-                          <Input className="w-28" type="time" value={slot.endTime} onChange={(e) => updateSlot(day as keyof OpeningHours, idx, "endTime", e.target.value)} />
+                          <TimePicker
+                            value={slot.endTime}
+                            onChange={(time) => updateSlot(day as keyof OpeningHours, idx, "endTime", time)}
+                            className="w-28"
+                          />
                           <Button variant="ghost" size="sm" onClick={() => removeSlot(day as keyof OpeningHours, idx)}>
                             <X className="h-4 w-4" />
                           </Button>

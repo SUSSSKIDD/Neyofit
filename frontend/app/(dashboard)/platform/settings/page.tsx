@@ -304,7 +304,7 @@ function CommissionTab() {
     defaultCommissionRate: 15,
     defaultPayoutSchedule: "monthly" as "weekly" | "biweekly" | "monthly",
     minimumPayoutAmount: 500,
-    timeFormat: "24h" as "12h" | "24h",
+    timeFormat: "12h" as "12h",
   });
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -319,7 +319,7 @@ function CommissionTab() {
             defaultCommissionRate: response.data.defaultCommissionRate,
             defaultPayoutSchedule: response.data.defaultPayoutSchedule,
             minimumPayoutAmount: response.data.minimumPayoutAmount,
-            timeFormat: response.data.timeFormat || "24h",
+            timeFormat: response.data.timeFormat || "12h",
           });
         }
       } catch {
@@ -421,14 +421,13 @@ function CommissionTab() {
             onChange={(e) =>
               setSettingsForm((f) => ({
                 ...f,
-                timeFormat: e.target.value as "12h" | "24h",
+                timeFormat: e.target.value as "12h",
               }))
             }
           >
             <option value="12h">12 Hour (AM/PM)</option>
-            <option value="24h">24 Hour</option>
           </select>
-          <p className="text-xs text-muted-foreground">Applied across the platform for displaying time slots</p>
+          <p className="text-xs text-muted-foreground">Time slots displayed in 12-hour format with AM/PM</p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
           {saving ? "Saving..." : "Save Settings"}

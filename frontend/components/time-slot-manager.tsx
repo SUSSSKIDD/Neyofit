@@ -18,7 +18,8 @@ import {
   AlertCircle
 } from "lucide-react"
 import { TimeSlot, DaySchedule, generateSlotId } from "@/lib/api"
-import { formatTime, parseTimeTo24, getDefaultTimeFormat, saveTimeFormat, TimeFormat } from "@/lib/utils"
+import { TimePicker } from "@/components/ui/time-picker"
+import { formatTime, parseTimeTo24 } from "@/lib/utils"
 
 interface TimeSlotManagerProps {
   daySchedule: DaySchedule
@@ -31,12 +32,11 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
   const [newSlotName, setNewSlotName] = useState("")
   const [newSlotStartTime, setNewSlotStartTime] = useState("09:00")
   const [newSlotEndTime, setNewSlotEndTime] = useState("21:00")
-  const [timeFormat, setTimeFormat] = useState<TimeFormat>(() => getDefaultTimeFormat())
 
   // Convert display time to 24h for storage
   const to24h = (time: string) => parseTimeTo24(time)
-  // Convert 24h storage to display format
-  const toDisplay = (time: string) => formatTime(time, timeFormat)
+  // Convert 24h storage to 12h display format
+  const toDisplay = (time: string) => formatTime(time)
 
   const addNewSlot = () => {
     if (!newSlotName.trim()) return
@@ -114,11 +114,6 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
     return "Active"
   }
 
-  const handleTimeFormatChange = (format: TimeFormat) => {
-    setTimeFormat(format)
-    saveTimeFormat(format)
-  }
-
   return (
     <Card className="w-full">
       <CardHeader className="pb-3">
@@ -134,15 +129,6 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
               />
               <span className="text-sm">Closed</span>
             </Label>
-            <Select value={timeFormat} onValueChange={handleTimeFormatChange}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Time Format" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="12h">12 Hour (AM/PM)</SelectItem>
-                <SelectItem value="24h">24 Hour</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
       </CardHeader>
@@ -167,17 +153,15 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
                         placeholder="Slot name"
                         className="text-sm"
                       />
-                      <Input
-                        type="time"
+                      <TimePicker
                         value={toDisplay(slot.startTime)}
-                        onChange={(e) => updateSlot(slot.id, { startTime: e.target.value })}
-                        className="text-sm"
+                        onChange={(time) => updateSlot(slot.id, { startTime: time })}
+                        className="w-full"
                       />
-                      <Input
-                        type="time"
+                      <TimePicker
                         value={toDisplay(slot.endTime)}
-                        onChange={(e) => updateSlot(slot.id, { endTime: e.target.value })}
-                        className="text-sm"
+                        onChange={(time) => updateSlot(slot.id, { endTime: time })}
+                        className="w-full"
                       />
                       <div className="flex gap-1">
                         <Button
@@ -249,17 +233,15 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
                   placeholder="Slot name (e.g., Morning, Evening)"
                   className="text-sm"
                 />
-                <Input
-                  type="time"
+                <TimePicker
                   value={toDisplay(newSlotStartTime)}
-                  onChange={(e) => setNewSlotStartTime(e.target.value)}
-                  className="text-sm"
+                  onChange={(time) => setNewSlotStartTime(time)}
+                  className="w-full"
                 />
-                <Input
-                  type="time"
+                <TimePicker
                   value={toDisplay(newSlotEndTime)}
-                  onChange={(e) => setNewSlotEndTime(e.target.value)}
-                  className="text-sm"
+                  onChange={(time) => setNewSlotEndTime(time)}
+                  className="w-full"
                 />
                 <Button
                   onClick={addNewSlot}
@@ -282,8 +264,3 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
     </Card>
   )
 }
-
-
-
-
-
