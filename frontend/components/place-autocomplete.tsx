@@ -42,12 +42,9 @@ export function PlaceAutocomplete({
     ) as google.maps.places.PlaceAutocompleteElement
 
     autocompleteElement.placeholder = placeholder
-    // New API uses locationRestriction instead of componentRestrictions
-    if (componentRestrictions?.country) {
-      autocompleteElement.locationRestriction = {
-        country: componentRestrictions.country
-      }
-    }
+    // New API uses locationRestriction with LatLngBounds, not componentRestrictions
+    // For country restriction, we need to use bounds or skip for now
+    // autocompleteElement.locationRestriction = { country: componentRestrictions.country } // This is invalid
     autocompleteElement.disabled = disabled
 
     // Insert after the input

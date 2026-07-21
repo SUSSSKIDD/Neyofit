@@ -1779,6 +1779,42 @@ class ApiService {
     return response.json();
   }
 
+  // Subscription API methods
+  async getUserSubscriptions(): Promise<ApiResponse<UserSubscription[]>> {
+    const response = await fetch(`${this.baseURL}/payments/user-subscriptions`, {
+      method: "GET",
+      credentials: 'include',
+    });
+    return response.json();
+  }
+
+  // Favorite API methods
+  async checkFavorite(gymId: string): Promise<ApiResponse<{ isFavorite: boolean }>> {
+    const response = await fetch(`${this.baseURL}/favorites/check/${gymId}`, {
+      method: "GET",
+      credentials: 'include',
+    });
+    return response.json();
+  }
+
+  async getUserFavorites(): Promise<ApiResponse<Gym[]>> {
+    const response = await fetch(`${this.baseURL}/favorites`, {
+      method: "GET",
+      credentials: 'include',
+    });
+    return response.json();
+  }
+
+  async toggleFavorite(gymId: string): Promise<ApiResponse<{ isFavorite: boolean }>> {
+    const response = await fetch(`${this.baseURL}/favorites/toggle`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: 'include',
+      body: JSON.stringify({ gymId }),
+    });
+    return response.json();
+  }
+
   // Gym Slots API methods
   async getGymSlots(gymId: string): Promise<ApiResponse<GymSlotData[]>> {
     const response = await fetch(`${this.baseURL}/gym-slots/${gymId}`, {
