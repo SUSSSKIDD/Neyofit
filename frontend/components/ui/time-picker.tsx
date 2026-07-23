@@ -124,7 +124,7 @@ export function TimePicker({
   return (
     <div className={`flex items-center gap-1 ${className}`}>
       {label && <label className="text-sm font-medium">{label}</label>}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 min-w-max">
         <div className="relative">
           <svg className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -141,7 +141,7 @@ export function TimePicker({
             minLength={1}
             placeholder="HH"
             disabled={disabled}
-            className="w-14 pl-8 text-center"
+            className="w-14 pl-8 text-center shrink-0"
             aria-label="Hour"
           />
         </div>
@@ -157,7 +157,7 @@ export function TimePicker({
           maxLength={2}
           placeholder="MM"
           disabled={disabled}
-          className="w-12 text-center"
+          className="w-12 text-center shrink-0"
           aria-label="Minute"
         />
         {showSeconds && (
@@ -174,7 +174,7 @@ export function TimePicker({
               maxLength={2}
               placeholder="SS"
               disabled={disabled}
-              className="w-12 text-center"
+              className="w-12 text-center shrink-0"
               aria-label="Second"
             />
           </>
@@ -184,7 +184,7 @@ export function TimePicker({
           value={ampm}
           onChange={handleAmPmChange}
           disabled={disabled}
-          className="w-24"
+          className="w-20 text-center shrink-0"
         >
           <option value="AM">AM</option>
           <option value="PM">PM</option>
