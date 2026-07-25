@@ -4,6 +4,9 @@ import { Subscription } from '@/subscription/subscription.model';
 import User from '@/user/user.model';
 import logger from '@/utils/logger';
 import { UserType } from '@/types/user.types';
+import { SubscriptionListing } from '@/subscriptionListing/subscriptionListing.model';
+import { Payment } from '@/payment/payment.model';
+import { GymReview } from '@/gymReview/gymReview.model';
 
 // Get gym owner dashboard data
 export const getGymOwnerDashboard = async (req: Request, res: Response): Promise<void> => {
@@ -228,6 +231,104 @@ export const rejectGym = async (req: Request, res: Response): Promise<void> => {
 
     } catch (error) {
         logger.error('Error rejecting gym', error as Error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+        });
+    }
+};
+
+// Get customer dashboard data
+export const getCustomerDashboard = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?._id;
+
+        if (!userId) {
+            res.status(401).json({
+                success: false,
+                message: 'Unauthorized'
+            });
+            return;
+        }
+
+        // Get user's active gym passes (subscriptions)
+        const subscriptions = await Subscription.find({ 
+            userId, 
+            status: 'active',
+            endDate: { $gte: new Date() }
+        })
+            .populate({
+                path: 'subscriptionListingId',
+                populate: {
+                    path: 'gymId',
+                    select: 'name locationId priceRange isActive',
+                    populate: {
+                        path: 'locationId',
+                        select: 'address city state'
+                    }
+                }
+            })
+            .sort({ createdAt: -1 });
+
+        // Get user's payment history
+        const payments = await Payment.find({ userId })
+            .populate({
+                path: 'subscriptionId',
+                populate: {
+                    path: 'subscriptionListingId',
+                    populate: {
+                        path: 'gymId',
+                        select: 'name'
+                    }
+                }
+            })
+            .sort({ createdAt: -1 })
+            .limit(20);
+
+        // Get user's reviews
+        const { GymReview } = await import('@/gymReview/gymReview.model');
+        const reviews = await GymReview.find({ userId })
+            .populate('gymId', 'name')
+            .sort({ createdAt: -1 });
+
+        // Calculate stats
+        const activeSubscriptions = subscriptions.filter(s => s.status === 'active');
+        const totalSpent = payments
+            .filter(p => p.status === 'paid')
+            .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+
+        // Find nearest expiring subscription
+        const nearestExpiring = activeSubscriptions.length > 0
+            ? activeSubscriptions.reduce((nearest: any, sub: any) => {
+                const end = new Date(sub.endDate).getTime();
+                const nearestEnd = nearest ? new Date(nearest.endDate).getTime() : Infinity;
+                return end < nearestEnd ? sub : nearest;
+            }, null)
+            : null;
+
+        const stats = {
+            activePasses: activeSubscriptions.length,
+            daysUntilExpiry: nearestExpiring 
+                ? Math.max(0, Math.ceil((new Date(nearestExpiring.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+                : null,
+            totalSpent,
+            totalPayments: payments.length,
+            recentReviews: reviews.length
+        };
+
+        res.status(200).json({
+            success: true,
+            data: {
+                subscriptions: activeSubscriptions,
+                payments,
+                reviews,
+                stats
+            }
+        });
+
+    } catch (error) {
+        logger.error('Error fetching customer dashboard', error as Error);
         res.status(500).json({
             success: false,
             message: 'Internal server error',

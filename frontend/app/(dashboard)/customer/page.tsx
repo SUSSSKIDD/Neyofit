@@ -2,44 +2,83 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Loader2, CreditCard, Dumbbell, Calendar, Activity, ArrowRight, Clock, Search, Star } from "lucide-react"
+import { Loader2, CreditCard, Dumbbell, Calendar, Activity, ArrowRight, Clock, Search, Star, AlertCircle, RefreshCw } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { apiService } from "@/lib/api"
 
 export default function CustomerDashboardPage() {
   const [gymPasses, setGymPasses] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadDashboard = async () => {
+    setLoading(true)
+    setError(null)
+    console.log("[CustomerDashboard] Loading dashboard data...")
+    
+    try {
+      const [passesRes, paymentsRes] = await Promise.all([
+        apiService.getActiveGymPasses(),
+        apiService.getUserPayments(),
+      ])
+      
+      console.log("[CustomerDashboard] Passes response:", passesRes)
+      console.log("[CustomerDashboard] Payments response:", paymentsRes)
+      
+      if (passesRes.success && passesRes.data) {
+        const data = passesRes.data as any
+        setGymPasses(data.subscriptions || data || [])
+      }
+      if (paymentsRes.success && paymentsRes.data) {
+        setPayments(Array.isArray(paymentsRes.data) ? paymentsRes.data : [])
+      }
+      
+      if (!passesRes.success) {
+        console.warn("[CustomerDashboard] Passes API warning:", passesRes.error || passesRes.message)
+      }
+      if (!paymentsRes.success) {
+        console.warn("[CustomerDashboard] Payments API warning:", paymentsRes.error || paymentsRes.message)
+      }
+    } catch (e) {
+      console.error("[CustomerDashboard] Failed to load dashboard:", e)
+      setError("Failed to load dashboard data. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [passesRes, paymentsRes] = await Promise.all([
-          apiService.getActiveGymPasses(),
-          apiService.getUserPayments(),
-        ])
-        if (passesRes.success && passesRes.data) {
-          const data = passesRes.data as any
-          setGymPasses(data.subscriptions || [])
-        }
-        if (paymentsRes.success && paymentsRes.data) {
-          setPayments(Array.isArray(paymentsRes.data) ? paymentsRes.data : [])
-        }
-      } catch (e) {
-        console.error("Failed to load dashboard:", e)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
+    loadDashboard()
   }, [])
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-muted-foreground">Loading dashboard...</span>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back! Here's your fitness overview.</p>
+        </div>
+        <Alert variant="destructive" className="flex flex-col items-center text-center p-8">
+          <AlertCircle className="h-12 w-12 mb-4" />
+          <AlertDescription className="text-lg">{error}</AlertDescription>
+          <Button onClick={loadDashboard} className="mt-4" variant="outline">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Retry
+          </Button>
+        </Alert>
       </div>
     )
   }

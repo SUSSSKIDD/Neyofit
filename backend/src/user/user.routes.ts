@@ -49,7 +49,7 @@ const router = Router();
  *       500:
  *         description: Server error
  */
-router.get('/', getAllUsers);
+router.get('/', authMiddleware, authorizeRoles([UserType.SUPERADMIN]), getAllUsers);
 
 // Bank details routes (must be before /:id to avoid conflicts)
 router.put('/bank-details', authMiddleware, authorizeRoles([UserType.GYM]), updateBankDetails);
@@ -120,7 +120,7 @@ router.get('/bank-details/:userId', authMiddleware, authorizeRoles([UserType.SUP
  *       404:
  *         description: User not found
  */
-router.get('/:id', getUserById);
+router.get('/:id', authMiddleware, getUserById);
 router.put('/:id', authMiddleware, updateUser);
 router.delete('/:id', authMiddleware, authorizeRoles([UserType.SUPERADMIN]), deleteUser);
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Search, MapPin, Star, ArrowUpDown, Filter, ChevronDown, ChevronUp, CheckCircle, X, Locate, Loader2 } from "lucide-react"
+import { Search, MapPin, Star, ArrowUpDown, Filter, ChevronDown, ChevronUp, CheckCircle, X, Locate, Loader2, AlertCircle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -17,6 +17,7 @@ import MapView from "@/components/map-view"
 import { Autocomplete } from "@react-google-maps/api"
 import { useGoogleMaps } from "@/components/google-maps-provider"
 import { getSavedLocation, saveLocation, calculateDistance } from "@/lib/user-location"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 import { searchGyms, searchGymsByLocation } from "@/lib/api"
 
@@ -90,7 +91,9 @@ export default function SearchPage() {
   const handleSearchByCoords = async (lat: number, lng: number) => {
     setLoading(true)
     try {
+      console.log("[SearchPage] Searching gyms by coordinates:", { lat, lng })
       const data = await searchGymsByLocation(lat, lng, 10, 50)
+      console.log("[SearchPage] Nearby search response:", data)
       let result = Array.isArray(data) ? data : (data.data || [])
       const mapped = result.map((gym: any) => {
         const g = mapApiGymToUi(gym)
@@ -102,7 +105,12 @@ export default function SearchPage() {
       })
       setGyms(mapped)
       setFilteredGyms(mapped)
-    } catch {
+      
+      if (mapped.length === 0) {
+        console.warn("[SearchPage] No gyms found near coordinates:", { lat, lng })
+      }
+    } catch (err) {
+      console.error("[SearchPage] Nearby search failed:", err)
       setError("Failed to fetch gyms nearby.")
     } finally {
       setLoading(false)
@@ -129,14 +137,21 @@ export default function SearchPage() {
     router.push(`/search?location=${encodeURIComponent(city)}`)
     setLoading(true)
     setError(null)
+    console.log("[SearchPage] Searching gyms near:", city)
     try {
       const data = await searchGyms({ near: city })
+      console.log("[SearchPage] Search response:", data)
       let gyms = (data.data?.gyms || []).map(mapApiGymToUi)
       // Filter gyms by city name (case-insensitive)
       gyms = gyms.filter((gym: any) => gym.location && gym.location.toLowerCase() === city.toLowerCase())
       setGyms(gyms)
       setFilteredGyms(gyms)
+      
+      if (gyms.length === 0) {
+        console.warn("[SearchPage] No gyms found for city:", city)
+      }
     } catch (err) {
+      console.error("[SearchPage] Search failed:", err)
       setError("Failed to fetch gyms. Please try again.")
     } finally {
       setLoading(false)

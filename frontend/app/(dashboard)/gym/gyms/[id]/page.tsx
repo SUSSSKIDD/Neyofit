@@ -5,7 +5,7 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import { apiService, type Gym } from "@/lib/api"
 import { toast } from "sonner"
-import { Loader2, Image, Clock, CreditCard, Save } from "lucide-react"
+import { Loader2, Image, Clock, CreditCard, Save, AlertCircle, RefreshCw } from "lucide-react"
 import {
   Card,
   CardHeader,
@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function EditGymPage() {
   const params = useParams()
@@ -32,6 +33,7 @@ export default function EditGymPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [gym, setGym] = useState<Gym | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -40,31 +42,47 @@ export default function EditGymPage() {
   const [website, setWebsite] = useState("")
   const [priceRange, setPriceRange] = useState("")
 
-  useEffect(() => {
-    async function fetchGym() {
-      try {
-        const res = await apiService.getGymById(gymId)
-        if (res.data) {
-          const g = res.data
-          setGym(g)
-          setName(g.name || "")
-          setDescription(g.description || "")
-          setPhone(g.contact?.phone || "")
-          setEmail(g.contact?.email || "")
-          setWebsite(g.contact?.website || "")
-          setPriceRange(g.priceRange || "")
-        }
-      } catch {
-        toast.error("Failed to load gym")
-      } finally {
-        setLoading(false)
+  const fetchGym = async () => {
+    setLoading(true)
+    setError(null)
+    console.log("[EditGymPage] Fetching gym:", gymId)
+    
+    try {
+      const res = await apiService.getGymById(gymId)
+      console.log("[EditGymPage] Gym response:", res)
+      
+      if (res.success && res.data) {
+        const g = res.data
+        setGym(g)
+        setName(g.name || "")
+        setDescription(g.description || "")
+        setPhone(g.contact?.phone || "")
+        setEmail(g.contact?.email || "")
+        setWebsite(g.contact?.website || "")
+        setPriceRange(g.priceRange || "")
+      } else {
+        const errorMsg = res.error || res.message || "Failed to load gym"
+        setError(errorMsg)
+        toast.error(errorMsg)
       }
+    } catch (e) {
+      console.error("[EditGymPage] Failed to load gym:", e)
+      const errorMsg = "Failed to load gym. Please try again."
+      setError(errorMsg)
+      toast.error(errorMsg)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchGym()
   }, [gymId])
 
   const handleSave = async () => {
     setSaving(true)
+    console.log("[EditGymPage] Saving gym:", gymId, { name, description, phone, email, website, priceRange })
+    
     try {
       const res = await apiService.updateGym(gymId, {
         name,
@@ -72,14 +90,18 @@ export default function EditGymPage() {
         contact: { phone, email, website },
         priceRange,
       })
-      if (res.data) {
+      console.log("[EditGymPage] Save response:", res)
+      
+      if (res.success && res.data) {
         toast.success("Gym updated successfully")
         setGym(res.data)
       } else {
-        toast.error(res.error || "Failed to update gym")
+        const errorMsg = res.error || res.message || "Failed to update gym"
+        toast.error(errorMsg)
       }
-    } catch {
-      toast.error("Failed to update gym")
+    } catch (e) {
+      console.error("[EditGymPage] Failed to update gym:", e)
+      toast.error("Failed to update gym. Please try again.")
     } finally {
       setSaving(false)
     }
@@ -89,15 +111,34 @@ export default function EditGymPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-muted-foreground">Loading gym...</span>
       </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive" className="p-8 text-center">
+        <AlertCircle className="h-12 w-12 mx-auto mb-4" />
+        <AlertDescription className="text-lg">{error}</AlertDescription>
+        <Button onClick={fetchGym} className="mt-4" variant="outline">
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Retry
+        </Button>
+      </Alert>
     )
   }
 
   if (!gym) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        Gym not found
-      </div>
+      <Alert className="p-8 text-center">
+        <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+        <AlertDescription className="text-lg">Gym not found</AlertDescription>
+        <Button onClick={fetchGym} className="mt-4" variant="outline">
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Retry
+        </Button>
+      </Alert>
     )
   }
 

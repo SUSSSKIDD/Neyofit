@@ -38,6 +38,41 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+// Logging utility
+const logApiRequest = (method: string, endpoint: string, payload?: unknown) => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.group(`🚀 API Request: ${method} ${endpoint}`);
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Base URL:', API_BASE_URL);
+    if (payload) {
+      console.log('Payload:', JSON.stringify(payload, null, 2));
+    }
+    console.groupEnd();
+  }
+};
+
+const logApiResponse = (method: string, endpoint: string, status: number, data: unknown, duration: number) => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.group(`✅ API Response: ${method} ${endpoint} (${status}) - ${duration}ms`);
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Status:', status);
+    console.log('Data:', JSON.stringify(data, null, 2));
+    console.groupEnd();
+  }
+};
+
+const logApiError = (method: string, endpoint: string, error: unknown, status?: number, responseData?: unknown) => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.group(`❌ API Error: ${method} ${endpoint}${status ? ` (${status})` : ''}`);
+    console.log('Timestamp:', new Date().toISOString());
+    console.error('Error:', error);
+    if (responseData) {
+      console.log('Response Data:', JSON.stringify(responseData, null, 2));
+    }
+    console.groupEnd();
+  }
+};
+
 // Add gym search functions
 export const searchGyms = async (params: {
   near?: string;
@@ -472,33 +507,76 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
+    const startTime = Date.now();
+    const method = options.method || 'GET';
     
+    // Log request
+    let payload: unknown = undefined;
+    if (options.body) {
+      try {
+        payload = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+      } catch {
+        payload = options.body;
+      }
+    }
+    logApiRequest(method, endpoint, payload);
+
     const defaultOptions: RequestInit = {
       ...options,
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
-      credentials: 'include', // Important: include cookies
+      credentials: 'include',
     };
+
+    // Remove Content-Type for FormData (browser sets it with boundary)
+    if (options.body instanceof FormData) {
+      delete (defaultOptions.headers as Record<string, string>)['Content-Type'];
+    }
 
     try {
       const response = await fetch(url, defaultOptions);
-      const data = await response.json();
+      const duration = Date.now() - startTime;
+      
+      let data: unknown;
+      try {
+        data = await response.json();
+      } catch {
+        data = await response.text();
+      }
+
+      // Log response
+      logApiResponse(method, endpoint, response.status, data, duration);
 
       // Handle 401 - token expired, try to refresh
       if (response.status === 401 && !endpoint.includes('/auth/')) {
+        console.warn(`🔄 Token expired for ${endpoint}, attempting refresh...`);
         const refreshed = await this.refreshToken();
         if (refreshed) {
           // Retry the original request
           const retryResponse = await fetch(url, defaultOptions);
-          return retryResponse.json();
+          const retryData = await retryResponse.json();
+          logApiResponse(method, endpoint, retryResponse.status, retryData, Date.now() - startTime);
+          return retryData;
         }
       }
 
-      return data;
+      // Standardize error handling
+      if (!response.ok) {
+        const errorResponse = data as { message?: string; error?: string };
+        const errorMessage = errorResponse?.message || errorResponse?.error || `HTTP error! status: ${response.status}`;
+        logApiError(method, endpoint, new Error(errorMessage), response.status, data);
+        return {
+          success: false,
+          error: errorMessage,
+        };
+      }
+
+      return data as ApiResponse<T>;
     } catch (error) {
-      console.error(`API request failed: ${endpoint}`, error);
+      const duration = Date.now() - startTime;
+      logApiError(method, endpoint, error);
       throw error;
     }
   }
@@ -1818,11 +1896,7 @@ class ApiService {
 
   // Gym Slots API methods
   async getGymSlots(gymId: string): Promise<ApiResponse<GymSlotData[]>> {
-    const response = await fetch(`${this.baseURL}/gym-slots/${gymId}`, {
-      method: "GET",
-      credentials: 'include',
-    });
-    return response.json();
+    return this.request<GymSlotData[]>(`/gym-slots/${gymId}`);
   }
 
   async createOrUpdateGymSlots(
@@ -1831,13 +1905,237 @@ class ApiService {
     slots: TimeSlot[],
     isClosed: boolean
   ): Promise<ApiResponse<{ gymSlot: any }>> {
-    const response = await fetch(`${this.baseURL}/gym-slots/${gymId}`, {
+    return this.request<{ gymSlot: any }>(`/gym-slots/${gymId}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: 'include',
       body: JSON.stringify({ dayOfWeek, slots, isClosed }),
     });
-    return response.json();
+  }
+
+  // Missing: Update specific gym slot
+  async updateGymSlot(
+    gymId: string,
+    dayOfWeek: string,
+    data: { slots?: TimeSlot[]; isClosed?: boolean }
+  ): Promise<ApiResponse<{ gymSlot: any }>> {
+    return this.request<{ gymSlot: any }>(`/gym-slots/${gymId}/${dayOfWeek}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Missing: Delete specific gym slot
+  async deleteGymSlot(gymId: string, dayOfWeek: string): Promise<ApiResponse<{ success: boolean }>> {
+    return this.request<{ success: boolean }>(`/gym-slots/${gymId}/${dayOfWeek}`, {
+      method: "DELETE",
+    });
+  }
+
+  // Missing: Get all gym pictures (public)
+  async getAllGymPictures(params?: { limit?: number; skip?: number }): Promise<ApiResponse<{ pictures: any[]; total: number }>> {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.skip) queryParams.append("skip", params.skip.toString());
+    return this.request<{ pictures: any[]; total: number }>(`/gym-pictures?${queryParams}`);
+  }
+
+  // Missing: Create gym picture (single upload)
+  async createGymPicture(gymId: string, file: File, caption?: string, isCover?: boolean): Promise<ApiResponse<any>> {
+    const formData = new FormData();
+    formData.append("gymId", gymId);
+    formData.append("imageData", file);
+    if (caption) formData.append("caption", caption);
+    if (isCover) formData.append("isCover", "true");
+    
+    return this.request<any>(`/gym-pictures`, {
+      method: "POST",
+      body: formData,
+    });
+  }
+
+  // Missing: Create gym picture from URL
+  async createGymPictureFromUrl(data: {
+    gymId: string;
+    imageUrl: string;
+    caption?: string;
+    altText?: string;
+    isCover?: boolean;
+  }): Promise<ApiResponse<any>> {
+    return this.request<any>(`/gym-pictures/url`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Missing: Get gym picture metadata
+  async getGymPictureMetadata(id: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/gym-pictures/${id}/metadata`);
+  }
+
+  // Missing: Get gym picture image
+  async getGymPictureImage(id: string): Promise<Response> {
+    const response = await fetch(`${this.baseURL}/gym-pictures/${id}/image`, {
+      method: "GET",
+      credentials: 'include',
+    });
+    return response;
+  }
+
+  // Missing: Get subscription listing by ID
+  async getSubscriptionListingById(id: string): Promise<ApiResponse<SubscriptionListing>> {
+    return this.request<SubscriptionListing>(`/subscription-listings/${id}`);
+  }
+
+  // Missing: Create subscription listing
+  async createSubscriptionListing(data: {
+    name: string;
+    type: string;
+    durationInDays: number;
+    gymId: string;
+    cost: number;
+    currency: string;
+    description?: string;
+    discount?: { amount: number; type: "percentage" | "fixed"; validUntil: string };
+    isActive?: boolean;
+    isRecurring?: boolean;
+    features?: string[];
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<SubscriptionListing>> {
+    return this.request<SubscriptionListing>(`/subscription-listings`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Missing: Update subscription listing
+  async updateSubscriptionListing(id: string, data: Partial<SubscriptionListing>): Promise<ApiResponse<SubscriptionListing>> {
+    return this.request<SubscriptionListing>(`/subscription-listings/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Missing: Delete subscription listing
+  async deleteSubscriptionListing(id: string): Promise<ApiResponse<{ message: string }>> {
+    return this.request<{ message: string }>(`/subscription-listings/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  // Missing: Update gym review
+  async updateGymReview(id: string, data: { rating?: number; comment?: string; images?: string[] }): Promise<ApiResponse<GymReview>> {
+    return this.request<GymReview>(`/gym-reviews/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Missing: Add gym subscription listing to gym
+  async addGymSubscriptionListing(gymId: string, subscriptionListingId: string): Promise<ApiResponse<Gym>> {
+    return this.request<Gym>(`/gyms/${gymId}/subscription-listings`, {
+      method: "POST",
+      body: JSON.stringify({ subscriptionListingId }),
+    });
+  }
+
+  // Missing: Add gym facility
+  async addGymFacility(gymId: string, facilityId: string): Promise<ApiResponse<Gym>> {
+    return this.request<Gym>(`/gyms/${gymId}/facilities`, {
+      method: "PATCH",
+      body: JSON.stringify({ facilityId }),
+    });
+  }
+
+  // Missing: Remove gym facility
+  async removeGymFacility(gymId: string, facilityId: string): Promise<ApiResponse<Gym>> {
+    return this.request<Gym>(`/gyms/${gymId}/facilities`, {
+      method: "DELETE",
+      body: JSON.stringify({ facilityId }),
+    });
+  }
+
+  // Missing: Approve gym (superadmin)
+  async approveGym(gymId: string): Promise<ApiResponse<Gym>> {
+    return this.request<Gym>(`/dashboard/gym/${gymId}/approve`, {
+      method: "PUT",
+    });
+  }
+
+  // Missing: Reject gym (superadmin)
+  async rejectGym(gymId: string): Promise<ApiResponse<Gym>> {
+    return this.request<Gym>(`/dashboard/gym/${gymId}/reject`, {
+      method: "PUT",
+    });
+  }
+
+  // Missing: Get payout by ID
+  async getPayoutById(id: string): Promise<ApiResponse<PayoutEntry>> {
+    return this.request<PayoutEntry>(`/payouts/${id}`);
+  }
+
+  // Missing: Get location by ID
+  async getLocationById(id: string): Promise<ApiResponse<Location>> {
+    return this.request<Location>(`/locations/${id}`);
+  }
+
+  // Missing: Get user by ID
+  async getUserById(id: string): Promise<ApiResponse<User>> {
+    return this.request<User>(`/users/${id}`);
+  }
+
+  // Missing: Subscribe to a plan
+  async subscribe(subscriptionListingId: string): Promise<ApiResponse<UserSubscription>> {
+    return this.request<UserSubscription>(`/subscriptions`, {
+      method: "POST",
+      body: JSON.stringify({ subscriptionListingId }),
+    });
+  }
+
+  // Missing: Cancel subscription
+  async cancelSubscription(id: string): Promise<ApiResponse<{ message: string }>> {
+    return this.request<{ message: string }>(`/subscriptions/${id}/cancel`, {
+      method: "PATCH",
+    });
+  }
+
+  // Missing: Remove favorite
+  async removeFavorite(gymId: string): Promise<ApiResponse<{ message: string }>> {
+    return this.request<{ message: string }>(`/favorites/${gymId}`, {
+      method: "DELETE",
+    });
+  }
+
+  // Missing: Get bank details by user ID (superadmin)
+  async getBankDetailsByUserId(userId: string): Promise<ApiResponse<BankDetailsData>> {
+    return this.request<BankDetailsData>(`/users/bank-details/${userId}`);
+  }
+
+  // Missing: Get user reviews (for customer dashboard)
+  async getUserReviews(userId: string): Promise<ApiResponse<GymReview[]>> {
+    return this.request<GymReview[]>(`/gym-reviews/user/${userId}`);
+  }
+
+  // Missing: Get customer dashboard data
+  async getCustomerDashboard(): Promise<ApiResponse<Record<string, unknown>>> {
+    return this.request<Record<string, unknown>>(`/dashboard/customer`);
+  }
+
+  // Missing: Upload gym (alternative to createGym)
+  async uploadGym(gymData: {
+    name: string;
+    description?: string;
+    locationId: string;
+    facilities?: string[];
+    openingHours?: OpeningHours;
+    contact?: { phone?: string; email?: string; website?: string };
+    priceRange?: string;
+    rating?: number;
+    isActive?: boolean;
+  }): Promise<ApiResponse<Gym>> {
+    return this.request<Gym>(`/gyms/upload`, {
+      method: "POST",
+      body: JSON.stringify(gymData),
+    });
   }
 }
 

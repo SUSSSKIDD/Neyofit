@@ -1,8 +1,15 @@
 import { Router } from 'express';
-import { getGymOwnerDashboard, getSuperAdminDashboard, approveGym, rejectGym } from './dashboard.controllers';
+import { getGymOwnerDashboard, getSuperAdminDashboard, approveGym, rejectGym, getCustomerDashboard } from './dashboard.controllers';
 import { authMiddleware } from './auth.middleware';
 
 const router = Router();
+
+/**
+ * @route   GET /api/v1/dashboard/customer
+ * @desc    Get customer dashboard data
+ * @access  Private (Customer)
+ */
+router.get('/customer', authMiddleware, getCustomerDashboard);
 
 /**
  * @route   GET /api/v1/dashboard/gym-owner
