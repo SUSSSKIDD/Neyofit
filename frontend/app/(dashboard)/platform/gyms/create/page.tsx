@@ -21,6 +21,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   ChevronLeft,
@@ -38,6 +47,7 @@ import {
   UserCheck,
   Building2,
   Search,
+  UserPlus,
 } from "lucide-react";
 import { TimePicker } from "@/components/ui/time-picker";
 import {
@@ -104,6 +114,16 @@ export default function CreateGymPage() {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [coverIndex, setCoverIndex] = useState<number | null>(null);
 
+  // ── Create Gym Owner Dialog ──
+  const [createOwnerDialogOpen, setCreateOwnerDialogOpen] = useState(false);
+  const [creatingOwner, setCreatingOwner] = useState(false);
+  const [ownerFormData, setOwnerFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+  });
+
   // Fetch gym owners for assignment
   useEffect(() => {
     (async () => {
@@ -125,6 +145,35 @@ export default function CreateGymPage() {
   const canProceed = () => {
     if (step === 0) return gymData.name.trim() !== "" && gymData.locationId !== "";
     return true;
+  };
+
+  const handleCreateGymOwner = async () => {
+    if (!ownerFormData.name || !ownerFormData.email || !ownerFormData.password) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    try {
+      setCreatingOwner(true);
+      const response = await apiService.createGymOwner(ownerFormData);
+      if (response.success && response.data?.user) {
+        toast.success("Gym owner created successfully");
+        setCreateOwnerDialogOpen(false);
+        setOwnerFormData({ name: "", email: "", phone: "", password: "" });
+        // Refresh owners list and auto-select the new owner
+        const res = await apiService.getUsers({ userType: "gym", limit: 100 });
+        if (res.success && res.data) {
+          setOwners(res.data);
+          setGymData((p) => ({ ...p, ownerId: response.data!.user._id }));
+          setOwnerSearch("");
+        }
+      } else {
+        toast.error(response.error || "Failed to create gym owner");
+      }
+    } catch {
+      toast.error("Failed to create gym owner");
+    } finally {
+      setCreatingOwner(false);
+    }
   };
 
   const handleNext = async () => {
@@ -367,7 +416,12 @@ export default function CreateGymPage() {
 
               {/* Owner Assignment */}
               <div className="space-y-3">
-                <Label>Assign Gym Owner (optional)</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Assign Gym Owner (optional)</Label>
+                  <Button variant="outline" size="sm" onClick={() => setCreateOwnerDialogOpen(true)}>
+                    <UserPlus className="h-3.5 w-3.5 mr-1.5" /> Create New
+                  </Button>
+                </div>
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -619,6 +673,63 @@ export default function CreateGymPage() {
           )}
         </Button>
       </div>
+    
+      {/* Create Gym Owner Dialog */}
+      <Dialog open={createOwnerDialogOpen} onOpenChange={setCreateOwnerDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Gym Owner</DialogTitle>
+            <DialogDescription>Create a new gym owner account to assign to this gym.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="ownerName">Name *</Label>
+              <Input
+                id="ownerName"
+                value={ownerFormData.name}
+                onChange={(e) => setOwnerFormData((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Full name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ownerEmail">Email *</Label>
+              <Input
+                id="ownerEmail"
+                type="email"
+                value={ownerFormData.email}
+                onChange={(e) => setOwnerFormData((prev) => ({ ...prev, email: e.target.value }))}
+                placeholder="email@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ownerPhone">Phone</Label>
+              <Input
+                id="ownerPhone"
+                value={ownerFormData.phone}
+                onChange={(e) => setOwnerFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                placeholder="+91 9876543210"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ownerPassword">Password *</Label>
+              <Input
+                id="ownerPassword"
+                type="password"
+                value={ownerFormData.password}
+                onChange={(e) => setOwnerFormData((prev) => ({ ...prev, password: e.target.value }))}
+                placeholder="Minimum 6 characters"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOwnerDialogOpen(false)} disabled={creatingOwner}>Cancel</Button>
+            <Button onClick={handleCreateGymOwner} disabled={creatingOwner}>
+              {creatingOwner && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Create Owner
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

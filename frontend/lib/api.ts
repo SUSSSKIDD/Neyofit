@@ -1057,6 +1057,7 @@ class ApiService {
     };
     priceRange?: string;
     rating?: number;
+    ownerId?: string;
   }): Promise<{
     success: boolean;
     gym?: Gym;
