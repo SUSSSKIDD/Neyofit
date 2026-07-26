@@ -263,7 +263,7 @@ export default function GymSearchWidget() {
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-md p-3 sm:p-6 rounded-2xl shadow-xl border border-white/50 max-w-3xl mx-auto max-h-[90vh] flex flex-col">
+    <div className="bg-white/95 backdrop-blur-md p-3 sm:p-6 rounded-2xl shadow-xl border border-white/50 max-w-3xl mx-auto max-h-[90vh] flex flex-col overflow-hidden">
       <div className="mb-3 sm:mb-5 flex-shrink-0">
         <h3 className="text-base sm:text-xl font-bold text-blue-900">
           Find Your Perfect Gym, Near You
@@ -276,8 +276,8 @@ export default function GymSearchWidget() {
       <div className="relative w-full flex-shrink-0">
         <div className="flex flex-col space-y-3">
           {/* Google Places Autocomplete search */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex-1 min-w-0">
               {isLoaded ? (
                 <PlaceAutocomplete
                   onPlaceSelect={handlePlaceSelect}
