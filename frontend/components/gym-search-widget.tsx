@@ -307,10 +307,9 @@ export default function GymSearchWidget() {
                 <Locate className="h-5 w-5" />
               )}
             </Button>
-          </div>
-
-          {/* Quick actions */}
-          <div className="flex flex-row gap-2 items-center justify-center">
+</div>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center justify-center">
             <Link href="/gyms">
               <Button
                 type="button"
@@ -321,7 +320,6 @@ export default function GymSearchWidget() {
               </Button>
             </Link>
           </div>
-        </div>
 
         {/* Error */}
         {error && (

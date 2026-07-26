@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
-<url><loc>https://neyofit.in/about</loc><lastmod>2026-07-26T10:09:32.369Z</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-<url><loc>https://neyofit.in/faq</loc><lastmod>2026-07-26T10:09:32.370Z</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-<url><loc>https://neyofit.in/gyms</loc><lastmod>2026-07-26T10:09:32.370Z</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
-<url><loc>https://neyofit.in</loc><lastmod>2026-07-26T10:09:32.370Z</lastmod><changefreq>daily</changefreq><priority>1</priority></url>
-<url><loc>https://neyofit.in/search</loc><lastmod>2026-07-26T10:09:32.370Z</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
-<url><loc>https://neyofit.in/partner</loc><lastmod>2026-07-26T10:09:32.370Z</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
-<url><loc>https://neyofit.in/terms</loc><lastmod>2026-07-26T10:09:32.370Z</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
-<url><loc>https://neyofit.in/passes</loc><lastmod>2026-07-26T10:09:32.370Z</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+<url><loc>https://neyofit.in/about</loc><lastmod>2026-07-26T10:56:44.706Z</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+<url><loc>https://neyofit.in/faq</loc><lastmod>2026-07-26T10:56:44.707Z</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+<url><loc>https://neyofit.in/partner</loc><lastmod>2026-07-26T10:56:44.707Z</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+<url><loc>https://neyofit.in/passes</loc><lastmod>2026-07-26T10:56:44.707Z</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+<url><loc>https://neyofit.in</loc><lastmod>2026-07-26T10:56:44.707Z</lastmod><changefreq>daily</changefreq><priority>1</priority></url>
+<url><loc>https://neyofit.in/search</loc><lastmod>2026-07-26T10:56:44.707Z</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
+<url><loc>https://neyofit.in/gyms</loc><lastmod>2026-07-26T10:56:44.707Z</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
+<url><loc>https://neyofit.in/terms</loc><lastmod>2026-07-26T10:56:44.707Z</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>
