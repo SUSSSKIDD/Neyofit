@@ -56,7 +56,7 @@ export const userSchema = new Schema<IUser>({
     password: {
         type: String,
         required: false,
-        minlength: 12
+        minlength: 6
     },
     tokenVersion: {
         type: Number,
