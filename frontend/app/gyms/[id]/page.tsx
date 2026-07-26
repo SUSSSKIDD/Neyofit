@@ -669,7 +669,7 @@ export default function GymDetailPage() {
                       );
 
                       // Link the plan to the gym
-                      const linkRes = await apiService.linkSubscriptionToGym(
+                      const linkRes = await apiService.addGymSubscriptionListing(
                         gymId,
                         newPlanId
                       );

@@ -134,6 +134,12 @@ export const getGymById = async (
 			.populate("subscriptionListings")
 			.populate("facilities");
 		if (!gym) return res.status(404).json({ error: "Gym not found" });
+
+		// Check if gym owner is authorized to view this gym
+		if (req.user?.userType === UserType.GYM && gym.ownerId?.toString() !== req.user._id.toString()) {
+			return res.status(403).json({ error: "Not authorized to view this gym" });
+		}
+
 		res.json({ success: true, data: gym as IGym });
 	} catch (error) {
 		res.status(500).json({ error: (error as Error).message });
@@ -150,6 +156,12 @@ export const getGymSubscriptionListings = async (
 			model: "SubscriptionListing"
 		});
 		if (!gym) return res.status(404).json({ error: "Gym not found" });
+
+		// Check if gym owner is authorized to view this gym
+		if (req.user?.userType === UserType.GYM && gym.ownerId?.toString() !== req.user._id.toString()) {
+			return res.status(403).json({ error: "Not authorized to view this gym" });
+		}
+
 		res.json({ success: true, data: gym.subscriptionListings });
 	} catch (error) {
 		res.status(500).json({ error: (error as Error).message });
@@ -165,6 +177,12 @@ export const addGymSubscriptionListing = async (
 		const { subscriptionListingId } = req.body;
 		const gym = await Gym.findById(req.params.id);
 		if (!gym) return res.status(404).json({ error: "Gym not found" });
+
+		// Check if gym owner is authorized to manage this gym
+		if (req.user?.userType === UserType.GYM && gym.ownerId?.toString() !== req.user._id.toString()) {
+			return res.status(403).json({ error: "Not authorized to manage this gym" });
+		}
+
 		if (!gym.subscriptionListings?.includes(subscriptionListingId as any)) {
 			gym.subscriptionListings?.push(subscriptionListingId as any);
 			await gym.save();
@@ -182,11 +200,19 @@ export const updateGym = async (
 	res: Response<IGym | { error: string }>
 ) => {
 	try {
-		const gym = await Gym.findByIdAndUpdate(req.params.id, req.body, { new: true })
+		const gym = await Gym.findById(req.params.id);
+		if (!gym) return res.status(404).json({ error: "Gym not found" });
+
+		// Check if gym owner is authorized to manage this gym
+		if (req.user?.userType === UserType.GYM && gym.ownerId?.toString() !== req.user._id.toString()) {
+			return res.status(403).json({ error: "Not authorized to manage this gym" });
+		}
+
+		const updatedGym = await Gym.findByIdAndUpdate(req.params.id, req.body, { new: true })
 			.populate("locationId")
 			.populate("facilities");
-		if (!gym) return res.status(404).json({ error: "Gym not found" });
-		res.json({ success: true, data: gym as IGym });
+		if (!updatedGym) return res.status(404).json({ error: "Gym not found" });
+		res.json({ success: true, data: updatedGym as IGym });
 	} catch (error) {
 		res.status(400).json({ error: (error as Error).message });
 	}
@@ -205,6 +231,11 @@ export const deleteGym = async (
 		const gym = await Gym.findById(gymId);
 		if (!gym) {
 			return res.status(404).json({ success: false, error: "Gym not found" });
+		}
+
+		// Check if gym owner is authorized to manage this gym
+		if (req.user?.userType === UserType.GYM && gym.ownerId?.toString() !== req.user._id.toString()) {
+			return res.status(403).json({ success: false, error: "Not authorized to manage this gym" });
 		}
 
 		// Import models for cascade deletion
@@ -297,6 +328,12 @@ export const addGymFacility = async (
 		const { facilityId } = req.body;
 		const gym = await Gym.findById(req.params.id);
 		if (!gym) return res.status(404).json({ success: false, error: "Gym not found" });
+
+		// Check if gym owner is authorized to manage this gym
+		if (req.user?.userType === UserType.GYM && gym.ownerId?.toString() !== req.user._id.toString()) {
+			return res.status(403).json({ success: false, error: "Not authorized to manage this gym" });
+		}
+
 		if (!gym.facilities?.includes(facilityId as any)) {
 			gym.facilities?.push(facilityId as any);
 			await gym.save();
@@ -316,6 +353,12 @@ export const removeGymFacility = async (
 		const { facilityId } = req.body;
 		const gym = await Gym.findById(req.params.id);
 		if (!gym) return res.status(404).json({ error: "Gym not found" });
+
+		// Check if gym owner is authorized to manage this gym
+		if (req.user?.userType === UserType.GYM && gym.ownerId?.toString() !== req.user._id.toString()) {
+			return res.status(403).json({ error: "Not authorized to manage this gym" });
+		}
+
 		gym.facilities = (gym.facilities || []).filter(
 			(fid) => fid.toString() !== facilityId
 		);
@@ -508,6 +551,11 @@ export const updateGymStatus = async (
 				success: false,
 				error: 'Gym not found'
 			});
+		}
+
+		// Check if gym owner is authorized to manage this gym
+		if (req.user?.userType === UserType.GYM && gym.ownerId?.toString() !== req.user._id.toString()) {
+			return res.status(403).json({ success: false, error: "Not authorized to manage this gym" });
 		}
 
 		// Notify gym owner of status change (fire-and-forget)
