@@ -201,7 +201,7 @@ class Logger {
 // Create default logger instance
 const logger = new Logger({
     level: process.env.LOG_LEVEL ? LogLevel[process.env.LOG_LEVEL as keyof typeof LogLevel] || LogLevel.INFO : LogLevel.INFO,
-    enableConsole: process.env.NODE_ENV !== 'production',
+    enableConsole: process.env.ENABLE_CONSOLE_LOGS === 'true' || process.env.NODE_ENV !== 'production',
     enableFile: process.env.NODE_ENV === 'production',
     logDir: process.env.LOG_DIR || './logs'
 });
