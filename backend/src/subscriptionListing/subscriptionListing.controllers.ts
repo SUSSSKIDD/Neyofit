@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { SubscriptionListing } from "./subscriptionListing.model";
 import { ISubscriptionListing } from "@/types/subscriptionListing.types";
+import { UserType } from "@/types/user.types";
+import { Gym } from "@/gym/gym.model";
 
 // Create a new subscription listing
 export const createSubscriptionListing = async (
@@ -8,6 +10,17 @@ export const createSubscriptionListing = async (
 	res: Response<{success:boolean, created:ISubscriptionListing} | {success:boolean, error: string }>
 ) => {
 	try {
+		// If user is a gym owner, verify they own the gym
+		if (req.user?.userType === UserType.GYM) {
+			const gym = await Gym.findById(req.body.gymId);
+			if (!gym) {
+				return res.status(404).json({ success: false, error: "Gym not found" });
+			}
+			if (gym.ownerId?.toString() !== req.user._id.toString()) {
+				return res.status(403).json({ success: false, error: "Not authorized to create subscription for this gym" });
+			}
+		}
+
 		const listing = await SubscriptionListing.create(req.body);
 		res.status(201).json({success:true, created:listing});
 	} catch (error) {

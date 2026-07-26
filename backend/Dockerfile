@@ -35,8 +35,8 @@ RUN npm ci --only=production --ignore-scripts
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 
 # Create uploads directories
-RUN mkdir -p /app/uploads/gym-pictures /app/uploads/general \
-    && chown -R nodejs:nodejs /app/uploads
+RUN mkdir -p /app/uploads/gym-pictures /app/uploads/general /app/logs \
+    && chown -R nodejs:nodejs /app/uploads /app/logs
 
 # Switch to non-root user
 USER nodejs
