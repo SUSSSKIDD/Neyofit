@@ -16,6 +16,7 @@ const cspDirectives = [
     "media-src 'self'",
     "object-src 'none'",
     "worker-src 'self' blob:",
+    "trusted-types 'allow-duplicates' default",
 ].join('; ');
 
 // Permissions Policy - Only standard features, no Privacy Sandbox experimental features
@@ -66,7 +67,10 @@ export const securityHeaders = (req: Request, res: Response, next: NextFunction)
     // Cross-Origin policies
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+
+    // Trusted Types for DOM XSS protection
+    res.setHeader('X-Content-Type-Options', 'nosniff');
 
     // Cache control for sensitive endpoints
     if (req.path.startsWith('/api/v1/auth') || req.path.startsWith('/api/v1/payments')) {
@@ -85,5 +89,11 @@ export const devSecurityHeaders = (req: Request, res: Response, next: NextFuncti
         const devCsp = cspDirectives.replace("'unsafe-eval'", "'unsafe-eval'");
         res.setHeader('Content-Security-Policy', devCsp);
     }
+    
+    // Always set these headers in dev too
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+    
     next();
 };

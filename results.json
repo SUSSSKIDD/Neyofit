@@ -1,0 +1,242 @@
+{
+  "lighthouseAudit": {
+    "timestamp": "2026-07-26T07:40:43.549Z",
+    "url": "https://neyofit.in/login",
+    "scores": {
+      "performance": 0.89,
+      "accessibility": 0.96,
+      "bestPractices": 0.96,
+      "seo": 0.61,
+      "agenticBrowsing": 1.0
+    },
+    "criticalIssues": {
+      "seo": [
+        {
+          "issue": "Canonical URL points to homepage instead of login page",
+          "impact": "Search engines may not index login page correctly",
+          "fix": "Update canonical to point to https://neyofit.in/login"
+        },
+        {
+          "issue": "Page blocked from indexing by robots.txt",
+          "impact": "Search engines cannot crawl login page",
+          "fix": "Remove 'Disallow: /login' from robots.txt"
+        },
+        {
+          "issue": "No structured data validation",
+          "impact": "Rich snippets may not appear in search results",
+          "fix": "Add valid JSON-LD structured data for login page"
+        }
+      ],
+      "performance": [
+        {
+          "issue": "LCP 2.1s (target < 2.5s, optimal < 1.5s)",
+          "metric": "largest-contentful-paint",
+          "value": 2093,
+          "details": {
+            "timeToFirstByte": 56,
+            "resourceLoadDelay": 598,
+            "resourceLoadDuration": 1667,
+            "elementRenderDelay": 32
+          },
+          "fix": "Optimize LCP image, add fetchpriority, reduce resource load delay"
+        },
+        {
+          "issue": "Unused JavaScript: 402 KiB potential savings",
+          "metric": "unused-javascript",
+          "wastedBytes": 411773,
+          "topCulprits": [
+            "Google Maps places.js: 90KB (99.9% unused)",
+            "Google Maps main.js: 54KB (63.7% unused)",
+            "neyofit chunks: 4e6af11a (90% unused), 4422-804f (85% unused)",
+            "ublock-filters: 50KB (25% unused)"
+          ]
+        },
+        {
+          "issue": "Unused CSS: 15 KiB potential savings",
+          "metric": "unused-css-rules",
+          "wastedBytes": 14869,
+          "culprit": "/_next/static/css/3084b4fd73fb0252.css (89.6% unused)"
+        },
+        {
+          "issue": "Modern HTTP: All resources on HTTP/1.1",
+          "metric": "modern-http-insight",
+          "estimatedSavings": "280ms",
+          "fix": "Enable HTTP/2 or HTTP/3 on server"
+        },
+        {
+          "issue": "Render-blocking CSS: 120ms savings",
+          "metric": "render-blocking-insight",
+          "culprits": [
+            "/_next/static/css/3084b4fd73fb0252.css (121ms)",
+            "/_next/static/css/13259dc9ccfa6acd.css (161ms)"
+          ]
+        },
+        {
+          "issue": "Legacy JavaScript: 11 KiB savings",
+          "metric": "legacy-javascript-insight",
+          "wastedBytes": 11458,
+          "signals": [
+            "Array.prototype.at",
+            "Array.prototype.flat",
+            "Array.prototype.flatMap",
+            "Object.fromEntries",
+            "Object.hasOwn",
+            "String.prototype.trimEnd",
+            "String.prototype.trimStart"
+          ]
+        },
+        {
+          "issue": "Image delivery: 626 KiB potential savings",
+          "metric": "image-delivery-insight",
+          "images": [
+            {
+              "url": "/images/neyofit.png",
+              "currentSize": "397KB",
+              "wastedBytes": 396696,
+              "issues": [
+                "Using modern format (WebP/AVIF) could save 311KB",
+                "Image 1273x404 displayed at 139x44 (98.9% wasted)"
+              ]
+            },
+            {
+              "url": "/images/hero-background.jpeg",
+              "currentSize": "340KB",
+              "wastedBytes": 244768,
+              "issues": [
+                "Image 2337x2283 displayed at 1497x999 (72% wasted)"
+              ]
+            }
+          ]
+        }
+      ],
+      "accessibility": [
+        {
+          "issue": "Color contrast: 'Send OTP' button insufficient (2.54:1 vs 4.5:1 required)",
+          "element": "button.inline-flex (Send OTP)",
+          "foreground": "#ffffff",
+          "background": "#ff7e10",
+          "currentRatio": 2.54,
+          "requiredRatio": 4.5,
+          "fix": "Darken button background or lighten text"
+        },
+        {
+          "issue": "Unsized image: Logo missing width/height attributes",
+          "element": "img.h-11 (Neyofit logo)",
+          "fix": "Add width and height attributes to logo image"
+        }
+      ],
+      "bestPractices": [
+        {
+          "issue": "No Content Security Policy (CSP)",
+          "severity": "High",
+          "fix": "Add CSP header with appropriate directives"
+        },
+        {
+          "issue": "No HSTS header",
+          "severity": "High",
+          "fix": "Add Strict-Transport-Security header"
+        },
+        {
+          "issue": "No COOP header (Cross-Origin-Opener-Policy)",
+          "severity": "High",
+          "fix": "Add Cross-Origin-Opener-Policy header"
+        },
+        {
+          "issue": "No clickjacking mitigation (X-Frame-Options or CSP frame-ancestors)",
+          "severity": "High",
+          "fix": "Add X-Frame-Options: DENY or CSP frame-ancestors 'none'"
+        },
+        {
+          "issue": "No Trusted Types for DOM XSS protection",
+          "severity": "High",
+          "fix": "Add CSP trusted-types directive"
+        },
+        {
+          "issue": "No COEP header (Cross-Origin-Embedder-Policy)",
+          "severity": "Medium",
+          "fix": "Add Cross-Origin-Embedder-Policy header"
+        }
+      ]
+    },
+    "opportunities": [
+      {
+        "category": "Image Optimization",
+        "actions": [
+          "Convert niyofit.png to WebP/AVIF format",
+          "Resize logo to displayed dimensions (139x44)",
+          "Add fetchpriority='high' to LCP image",
+          "Add width/height attributes to all images",
+          "Use responsive images with srcset for hero background"
+        ]
+      },
+      {
+        "category": "JavaScript Optimization",
+        "actions": [
+          "Remove unused Google Maps code (90%+ unused)",
+          "Code-split Google Maps - load only when needed",
+          "Remove legacy polyfills (Array.at, flat, flatMap, Object.fromEntries, etc.)",
+          "Configure build to target modern browsers (ES2020+)",
+          "Enable tree-shaking for all dependencies"
+        ]
+      },
+      {
+        "category": "CSS Optimization",
+        "actions": [
+          "Remove unused CSS from 3084b4fd73fb0252.css (89.6% unused)",
+          "Inline critical CSS for above-the-fold content",
+          "Defer non-critical CSS with media='print' onload pattern",
+          "Remove unused CSS from 13259dc9ccfa6acd.css"
+        ]
+      },
+      {
+        "category": "Security Headers",
+        "actions": [
+          "Add Content-Security-Policy header",
+          "Add Strict-Transport-Security header (max-age=31536000; includeSubDomains; preload)",
+          "Add Cross-Origin-Opener-Policy: same-origin",
+          "Add Cross-Origin-Embedder-Policy: require-corp",
+          "Add X-Frame-Options: DENY",
+          "Add CSP trusted-types directive"
+        ]
+      },
+      {
+        "category": "SEO Fixes",
+        "actions": [
+          "Fix canonical URL on login page to point to /login",
+          "Remove 'Disallow: /login' from robots.txt",
+          "Add valid JSON-LD structured data for login page",
+          "Verify canonical URLs on all pages"
+        ]
+      },
+      {
+        "category": "Server & Network",
+        "actions": [
+          "Enable HTTP/2 or HTTP/3 on server",
+          "Add preconnect hints for critical origins (maps.googleapis.com, api.neyofit.in)",
+          "Enable text compression (gzip/brotli) for all text resources",
+          "Configure proper cache headers for static assets",
+          "Add preconnect for Google Maps API"
+        ]
+      },
+      {
+        "category": "Accessibility",
+        "actions": [
+          "Fix 'Send OTP' button color contrast (darken orange background or use white text)",
+          "Add width/height attributes to logo image",
+          "Ensure all buttons have accessible names",
+          "Verify heading hierarchy (h1 → h2 → h3)"
+        ]
+      }
+    ],
+    "metricsSummary": {
+      "firstContentfulPaint": 425,
+      "largestContentfulPaint": 2093,
+      "speedIndex": 1022,
+      "totalBlockingTime": 0,
+      "maxPotentialFid": 18,
+      "cumulativeLayoutShift": 0,
+      "timeToFirstByte": 213,
+      "interactive": 2093
+    }
+  }
+}

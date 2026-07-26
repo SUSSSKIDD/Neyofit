@@ -122,6 +122,9 @@ export async function generateMetadata({ params, gymData }: GymDetailLayoutProps
       index: true,
       follow: true,
     },
+    alternates: {
+      canonical: `https://neyofit.in/gyms/${gym._id}`,
+    },
     other: {
       'application/ld+json': JSON.stringify([structuredData, breadcrumbSchema]),
     },

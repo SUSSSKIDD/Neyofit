@@ -12,9 +12,21 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 import { useAuth } from "@/contexts/auth-context"
 import { apiService } from "@/lib/api"
+import Script from "next/script"
 
-type LoginStep = 'EMAIL' | 'CHOOSE_METHOD' | 'PASSWORD' | 'OTP' | 'NO_ACCOUNT'
-type SignupStep = 'EMAIL' | 'OTP' | 'PROFILE'
+// JSON-LD Structured Data for Login Page
+const loginPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: 'Neyofit - Login & Sign Up',
+  description: 'Access your Neyofit account to manage gym passes, view payments, and track your fitness journey.',
+  url: 'https://neyofit.in/login',
+  potentialAction: {
+    '@type': 'LoginAction',
+    target: 'https://neyofit.in/api/v1/auth/login-user',
+    'action-status': 'https://schema.org/PotentialActionStatus'
+  }
+}
 
 const getRedirectUrl = (userType: string) => {
   switch (userType) {
@@ -377,7 +389,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleLoginUsePassword}
               disabled={isLoading || !loginEmail}
-              className="w-full text-sm text-white/60 hover:text-white/80 transition-colors flex items-center justify-center gap-2 py-2 border border-white/10 rounded-md hover:border-white/20 disabled:opacity-40"
+              className="w-full text-sm text-orange-300 hover:text-orange-200 transition-colors flex items-center justify-center gap-2 py-2 border border-orange-400/50 rounded-md hover:border-orange-400 disabled:opacity-40"
             >
               <Lock className="h-3.5 w-3.5" />
               Sign in with password instead
@@ -513,10 +525,10 @@ export default function LoginPage() {
               </button>
             </div>
 
-            <Button
+<Button
               type="submit"
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-2.5 shadow-lg shadow-orange-500/20"
-              disabled={isLoading || loginOtp.length !== 6}
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-2.5 shadow-lg shadow-orange-600/20"
+              disabled={isLoading}
             >
               {isLoading ? (
                 <>
@@ -674,7 +686,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-2.5 shadow-lg shadow-orange-500/20"
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-2.5 shadow-lg shadow-orange-600/20"
               disabled={isLoading || signupOtp.length !== 6}
             >
               Verify Email
@@ -903,6 +915,9 @@ export default function LoginPage() {
                 src="/images/neyofit.png"
                 alt="Neyofit"
                 className="h-11 rounded-lg mx-auto"
+                width={139}
+                height={44}
+                fetchpriority="high"
               />
             </Link>
             <h1 className="text-xl sm:text-2xl font-bold text-white">
@@ -956,6 +971,12 @@ export default function LoginPage() {
         <p className="text-center text-white/30 text-xs mt-6">
           &copy; {new Date().getFullYear()} Neyofit. All rights reserved.
         </p>
+        {/* JSON-LD Structured Data for SEO */}
+        <Script
+          id="schema-login-page"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(loginPageSchema) }}
+        />
       </div>
     </div>
   )
