@@ -18,8 +18,57 @@ import AnimatedNavbar from "@/components/animated-navbar"
 import HowItWorksSection from "@/components/how-it-works-section"
 import PopularGymsSection from "@/components/popular-gyms-section"
 import dynamic from "next/dynamic"
+import Script from "next/script"
 
 const GymSearchWidget = dynamic(() => import("@/components/gym-search-widget"), { ssr: false })
+
+// FAQPage Schema for SEO
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Do I have to pay online?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes, all bookings are made online through our secure payment gateway. You can use UPI, cards, net banking, or wallets. Payment is required to confirm your booking.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Can I cancel my booking?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes, you can cancel your booking up to 2 hours before the session start time for a full refund. Cancellations within 2 hours may be subject to a fee.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Do gyms accept walk-ins?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'We recommend booking in advance to guarantee your spot. Some gyms may accept walk-ins based on availability, but booking online ensures your entry.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'What if the gym is closed when I arrive?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'If a gym is unexpectedly closed during your booked session, contact our support immediately. We\'ll provide a full refund and help you find an alternative gym nearby.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Are there any hidden charges?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'No hidden charges. The price you see is the price you pay. All taxes and fees are included in the displayed price.'
+      }
+    }
+  ]
+}
 
 function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
   const ref = useRef<HTMLSpanElement>(null)
@@ -344,6 +393,11 @@ export default function Home() {
       </section>
 
       <Footer />
+      <Script
+        id="schema-faq"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
     </div>
   )
 }

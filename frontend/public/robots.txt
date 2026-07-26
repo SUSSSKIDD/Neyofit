@@ -1,0 +1,19 @@
+# *
+User-agent: *
+Allow: /
+
+# *
+User-agent: *
+Disallow: /customer/
+Disallow: /gym/
+Disallow: /platform/
+Disallow: /login
+Disallow: /checkout
+Disallow: /api/
+
+# Host
+Host: https://neyofit.in
+
+# Sitemaps
+Sitemap: https://neyofit.in/sitemap.xml
+Sitemap: https://neyofit.in/sitemap-gyms.xml
