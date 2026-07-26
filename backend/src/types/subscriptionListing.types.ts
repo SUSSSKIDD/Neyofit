@@ -3,6 +3,7 @@ import { Currency } from "@/types/currency.types";
 
 export enum SubscriptionListingType {
   DAILY = 'daily',
+  WEEKLY = 'weekly',
   MONTHLY = 'monthly',
   YEARLY = 'yearly',
   CUSTOM = 'custom'

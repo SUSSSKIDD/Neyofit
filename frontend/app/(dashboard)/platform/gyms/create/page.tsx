@@ -252,13 +252,19 @@ export default function CreateGymPage() {
             isRecurring: false,
             features: plan.features || [],
           });
-          if (res.success && res.created) {
-            await apiService.linkSubscriptionToGym(draftGymId, res.created._id);
+          if (!res.success) {
+            throw new Error(res.error || "Failed to create plan: " + plan.name);
+          }
+          if (res.created) {
+            const linkRes = await apiService.addGymSubscriptionListing(draftGymId, res.created._id);
+            if (!linkRes.success) {
+              throw new Error(linkRes.error || "Failed to link plan: " + plan.name);
+            }
           }
         }
         setStep(3);
-      } catch {
-        setError("Failed to save plans");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to save plans");
       } finally {
         setLoading(false);
       }
