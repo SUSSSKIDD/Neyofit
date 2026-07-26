@@ -176,20 +176,20 @@ export const addGymSubscriptionListing = async (
 	try {
 		const { subscriptionListingId } = req.body;
 		const gym = await Gym.findById(req.params.id);
-		if (!gym) return res.status(404).json({ error: "Gym not found" });
+		if (!gym) return res.status(404).json({ success: false, error: "Gym not found" });
 
 		// Check if gym owner is authorized to manage this gym
 		if (req.user?.userType === UserType.GYM && gym.ownerId?.toString() !== req.user._id.toString()) {
-			return res.status(403).json({ error: "Not authorized to manage this gym" });
+			return res.status(403).json({ success: false, error: "Not authorized to manage this gym" });
 		}
 
 		if (!gym.subscriptionListings?.includes(subscriptionListingId as any)) {
 			gym.subscriptionListings?.push(subscriptionListingId as any);
 			await gym.save();
 		}
-		res.json(gym);
+		res.json({ success: true, data: gym });
 	} catch (error) {
-		res.status(400).json({ error: (error as Error).message });
+		res.status(400).json({ success: false, error: (error as Error).message });
 	}
 };
 
