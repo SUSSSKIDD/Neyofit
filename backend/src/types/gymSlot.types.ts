@@ -8,6 +8,7 @@ export interface ITimeSlot {
   maxCapacity?: number;
   price?: number;
   isActive?: boolean;
+  isOvernight?: boolean;
 }
 
 export interface IGymSlot extends Document {

@@ -15,7 +15,9 @@ import {
   X, 
   Clock,
   Check,
-  AlertCircle
+  AlertCircle,
+  Moon,
+  Sun
 } from "lucide-react"
 import { TimeSlot, DaySchedule, generateSlotId } from "@/lib/api"
 import { TimePicker } from "@/components/ui/time-picker"
@@ -29,9 +31,11 @@ interface TimeSlotManagerProps {
 
 export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: TimeSlotManagerProps) {
   const [editingSlot, setEditingSlot] = useState<string | null>(null)
+  const [editingSlotIsOvernight, setEditingSlotIsOvernight] = useState(false)
   const [newSlotName, setNewSlotName] = useState("")
   const [newSlotStartTime, setNewSlotStartTime] = useState("09:00")
   const [newSlotEndTime, setNewSlotEndTime] = useState("21:00")
+  const [newSlotIsOvernight, setNewSlotIsOvernight] = useState(false)
 
   // Convert display time to 24h for storage
   const to24h = (time: string) => parseTimeTo24(time)
@@ -46,7 +50,8 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
       name: newSlotName.trim(),
       startTime: to24h(newSlotStartTime),
       endTime: to24h(newSlotEndTime),
-      isActive: true
+      isActive: true,
+      isOvernight: newSlotIsOvernight
     }
 
     const updatedSchedule = {
@@ -58,6 +63,7 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
     setNewSlotName("")
     setNewSlotStartTime("09:00")
     setNewSlotEndTime("21:00")
+    setNewSlotIsOvernight(false)
   }
 
   const updateSlot = (slotId: string, updates: Partial<TimeSlot>) => {
@@ -97,23 +103,24 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
     })
   }
 
-  const validateTimeSlot = (startTime: string, endTime: string): boolean => {
+  const validateTimeSlot = (startTime: string, endTime: string, isOvernight: boolean = false): boolean => {
     if (!startTime || !endTime) return false
+    // For overnight slots, end time can be before start time
+    if (isOvernight) return true
     return to24h(startTime) < to24h(endTime)
   }
 
   const getSlotStatusColor = (slot: TimeSlot) => {
     if (!slot.isActive) return "bg-gray-100 text-gray-500"
-    if (!validateTimeSlot(slot.startTime, slot.endTime)) return "bg-red-100 text-red-700"
+    if (!validateTimeSlot(slot.startTime, slot.endTime, slot.isOvernight)) return "bg-red-100 text-red-700"
     return "bg-green-100 text-green-700"
   }
 
   const getSlotStatusText = (slot: TimeSlot) => {
     if (!slot.isActive) return "Inactive"
-    if (!validateTimeSlot(slot.startTime, slot.endTime)) return "Invalid Time"
-    return "Active"
+    if (!validateTimeSlot(slot.startTime, slot.endTime, slot.isOvernight)) return "Invalid Time"
+    return slot.isOvernight ? "Active (Overnight)" : "Active"
   }
-
   return (
     <Card className="w-full">
       <CardHeader className="pb-3">
@@ -146,7 +153,7 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
               {daySchedule.slots.map((slot) => (
                 <div key={slot.id} className="flex items-center gap-3 p-3 border rounded-lg">
                   {editingSlot === slot.id ? (
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-2">
                       <Input
                         value={slot.name}
                         onChange={(e) => updateSlot(slot.id, { name: e.target.value })}
@@ -163,11 +170,27 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
                         onChange={(time) => updateSlot(slot.id, { endTime: time })}
                         className="w-full"
                       />
+                      <Label className="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingSlotIsOvernight}
+                          onChange={(e) => {
+                            setEditingSlotIsOvernight(e.target.checked)
+                            updateSlot(slot.id, { isOvernight: e.target.checked })
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-xs">Overnight</span>
+                        <Moon className="h-3 w-3" />
+                      </Label>
                       <div className="flex gap-1">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setEditingSlot(null)}
+                          onClick={() => {
+                            setEditingSlot(null)
+                            setEditingSlotIsOvernight(false)
+                          }}
                         >
                           <Save className="h-3 w-3" />
                         </Button>
@@ -198,7 +221,10 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setEditingSlot(slot.id)}
+                          onClick={() => {
+                            setEditingSlot(slot.id)
+                            setEditingSlotIsOvernight(slot.isOvernight || false)
+                          }}
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
@@ -226,7 +252,7 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
             {/* Add New Slot */}
             <div className="border-t pt-4">
               <h4 className="text-sm font-medium mb-3">Add New Time Slot</h4>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
                 <Input
                   value={newSlotName}
                   onChange={(e) => setNewSlotName(e.target.value)}
@@ -243,18 +269,28 @@ export default function TimeSlotManager({ daySchedule, onUpdate, dayName }: Time
                   onChange={(time) => setNewSlotEndTime(time)}
                   className="w-full"
                 />
+                <Label className="flex items-center gap-1 cursor-pointer flex-col justify-center">
+                  <input
+                    type="checkbox"
+                    checked={newSlotIsOvernight}
+                    onChange={(e) => setNewSlotIsOvernight(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-xs">Overnight</span>
+                  <Moon className="h-3 w-3" />
+                </Label>
                 <Button
                   onClick={addNewSlot}
-                  disabled={!newSlotName.trim() || !validateTimeSlot(toDisplay(newSlotStartTime), toDisplay(newSlotEndTime))}
+                  disabled={!newSlotName.trim() || !validateTimeSlot(toDisplay(newSlotStartTime), toDisplay(newSlotEndTime), newSlotIsOvernight)}
                   className="text-sm"
                 >
                   <Plus className="h-3 w-3 mr-1" />
                   Add Slot
                 </Button>
               </div>
-              {!validateTimeSlot(toDisplay(newSlotStartTime), toDisplay(newSlotEndTime)) && (
+              {!validateTimeSlot(toDisplay(newSlotStartTime), toDisplay(newSlotEndTime), newSlotIsOvernight) && (
                 <p className="text-xs text-red-500 mt-1">
-                  End time must be after start time
+                  End time must be after start time (unless overnight)
                 </p>
               )}
             </div>

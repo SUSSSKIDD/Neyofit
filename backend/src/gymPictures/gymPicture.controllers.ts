@@ -4,6 +4,7 @@ import fs from "fs/promises";
 import { GymPicture } from "./gymPicture.model";
 import { IGymPicture } from "@/types/gymPicture.types";
 import { Gym } from "@/gym/gym.model";
+import { SubscriptionListing } from "@/subscriptionListing/subscriptionListing.model";
 import { compressImage } from "@/utils/imageProcessor";
 // Build a stable image URL using the API endpoint (works in both local and Docker)
 function toImageUrl(req: Request, pictureId: string, imageUrl?: string): string {
@@ -176,6 +177,12 @@ export const deleteGymPicture = async (
 			{ $pull: { pictures: picture._id } }
 		);
 
+		// Also remove from any subscription listings
+		await SubscriptionListing.updateMany(
+			{ pictureId: picture._id },
+			{ $unset: { pictureId: "" } }
+		);
+
 		res.json({ success: true, data: { message: "Picture deleted" } });
 	} catch (error) {
 		res.status(400).json({ success: false, error: (error as Error).message });
@@ -224,7 +231,7 @@ export const bulkUploadGymPictures = async (
 ) => {
 	try {
 		const files = req.files as Express.Multer.File[];
-		const { gymId, captions, isCover } = req.body;
+		const { gymId, captions, isCover, planIds } = req.body;
 
 		if (!files || !Array.isArray(files) || files.length === 0) {
 			return res.status(400).json({ success: false, error: "No files provided" });
@@ -236,6 +243,7 @@ export const bulkUploadGymPictures = async (
 
 		const captionsArray = captions ? JSON.parse(captions) : [];
 		const isCoverArray = isCover ? JSON.parse(isCover) : [];
+		const planIdsArray = planIds ? JSON.parse(planIds) : [];
 
 		const pictures = [];
 		const pictureIds = [];
@@ -266,6 +274,22 @@ export const bulkUploadGymPictures = async (
 			{ $push: { pictures: { $each: pictureIds } } },
 			{ new: true }
 		);
+
+		// Associate pictures with plans if planIds provided
+		// Handle mismatched counts by associating where both exist
+		if (planIdsArray && planIdsArray.length > 0) {
+			const minLength = Math.min(planIdsArray.length, pictureIds.length);
+			for (let i = 0; i < minLength; i++) {
+				const planId = planIdsArray[i];
+				if (planId && planId !== 'null' && planId !== null) {
+					await SubscriptionListing.findByIdAndUpdate(
+						planId,
+						{ pictureId: pictureIds[i] },
+						{ new: true }
+					);
+				}
+			}
+		}
 
 		// Add imageUrl to each picture for frontend consumption
 		const picturesWithUrls = pictures.map(p => ({

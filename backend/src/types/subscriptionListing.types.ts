@@ -30,6 +30,7 @@ export interface ISubscriptionListing extends Document {
   features?: string[]; // Optional: list of included features
   startDate?: Date; // For custom/limited subscriptions
   endDate?: Date;   // For custom/limited subscriptions
+  pictureId?: Types.ObjectId; // Optional: reference to gym picture for this plan
   createdAt: Date;
   updatedAt: Date;
 }

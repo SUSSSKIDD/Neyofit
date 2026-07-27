@@ -8,7 +8,8 @@ const TimeSlotSchema = new Schema({
   endTime: { type: String, required: true },
   maxCapacity: { type: Number, default: 10 },
   price: { type: Number, default: 0 },
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  isOvernight: { type: Boolean, default: false }
 }, { _id: false });
 
 const GymSlotSchema = new Schema<IGymSlot>({

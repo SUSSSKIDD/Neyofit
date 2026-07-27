@@ -93,6 +93,7 @@ export default function CreateGymPage() {
   const [owners, setOwners] = useState<User[]>([]);
   const [ownerSearch, setOwnerSearch] = useState("");
   const [draftGymId, setDraftGymId] = useState<string | null>(null);
+  const [createdPlanIds, setCreatedPlanIds] = useState<string[]>([]);
 
   // ── Step 2: Slots ──
   const [openingHours, setOpeningHours] = useState<OpeningHours>({
@@ -222,6 +223,7 @@ export default function CreateGymPage() {
               maxCapacity: 10,
               price: 0,
               isActive: slot.isActive !== false,
+              isOvernight: slot.isOvernight || false,
             })),
             s.isClosed
           );
@@ -238,6 +240,7 @@ export default function CreateGymPage() {
       if (!draftGymId) return;
       setLoading(true);
       try {
+        const newPlanIds: string[] = [];
         for (const plan of gymPlans) {
           if (!plan.name?.trim()) continue;
           const res = await apiService.createSubscriptionListing({
@@ -256,12 +259,14 @@ export default function CreateGymPage() {
             throw new Error(res.error || "Failed to create plan: " + plan.name);
           }
           if (res.created) {
+            newPlanIds.push(res.created._id);
             const linkRes = await apiService.addGymSubscriptionListing(draftGymId, res.created._id);
             if (!linkRes.success) {
               throw new Error(linkRes.error || "Failed to link plan: " + plan.name);
             }
           }
         }
+        setCreatedPlanIds(newPlanIds);
         setStep(3);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to save plans");
@@ -275,7 +280,9 @@ export default function CreateGymPage() {
       setLoading(true);
       try {
         const isCover = selectedImages.map((_, i) => i === coverIndex);
-        await apiService.bulkUploadGymPictures(draftGymId, selectedImages, undefined, isCover);
+        // Pass planIds array to associate images with plans
+        const planIds = createdPlanIds.length > 0 ? createdPlanIds : undefined;
+        await apiService.bulkUploadGymPictures(draftGymId, selectedImages, undefined, isCover, planIds);
         setStep(4);
       } catch {
         setError("Failed to upload images");

@@ -11,16 +11,16 @@ import {
   CalendarCheck,
   Globe,
   BadgeCheck,
+  Search,
+  MapPin,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import Footer from "@/components/footer"
 import AnimatedNavbar from "@/components/animated-navbar"
 import HowItWorksSection from "@/components/how-it-works-section"
 import PopularGymsSection from "@/components/popular-gyms-section"
-import dynamic from "next/dynamic"
 import Script from "next/script"
-
-const GymSearchWidget = dynamic(() => import("@/components/gym-search-widget"), { ssr: false })
 
 // FAQPage Schema for SEO
 const faqSchema = {
@@ -149,14 +149,37 @@ export default function Home() {
               Access verified fitness centers across India. No contracts. Pay only when you go.
             </motion.p>
 
-            {/* Gym Search Widget */}
+            {/* Clean Search Bar in Hero */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.7 }}
               className="max-w-3xl mx-auto"
             >
-              <GymSearchWidget />
+              <div className="bg-white/95 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-xl border border-white/50">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                      placeholder="Search gyms by area, city, or landmark..."
+                      className="pl-11 py-3 sm:py-4 text-base"
+                    />
+                  </div>
+                  <Button
+                    size="lg"
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 sm:py-4 gap-2 shadow-lg shadow-orange-500/20 whitespace-nowrap"
+                    asChild
+                  >
+                    <Link href="/gyms">
+                      Find Gyms
+                      <ArrowRight size={20} />
+                    </Link>
+                  </Button>
+                </div>
+                <p className="text-center sm:text-left mt-3 text-sm text-gray-500">
+                  <MapPin className="inline h-3.5 w-3.5 mr-1" /> Or <Link href="/gyms" className="text-orange-500 hover:underline font-medium">browse all gyms</Link> near you
+                </p>
+              </div>
             </motion.div>
 
             {/* Trust indicators */}

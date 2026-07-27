@@ -78,13 +78,10 @@ export const getGyms = async (
 			query.isActive = true;
 		}
 
-		// Gym owners can see their own gyms
+		// Gym owners can see ONLY their own gyms (not global published gyms)
 		if (req.user && req.user.userType === UserType.GYM) {
 			query = {
-				$or: [
-					{ status: 'published', isActive: true },
-					{ ownerId: req.user._id }
-				]
+				ownerId: req.user._id
 			};
 		}
 

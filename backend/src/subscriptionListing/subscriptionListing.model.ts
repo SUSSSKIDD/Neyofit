@@ -23,7 +23,8 @@ const SubscriptionListingSchema = new Schema<ISubscriptionListing>({
 	isRecurring: { type: Boolean },
 	features: [{ type: String }],
 	startDate: { type: Date },
-	endDate: { type: Date }
+	endDate: { type: Date },
+	pictureId: { type: Schema.Types.ObjectId, ref: 'GymPicture', required: false }
 }, {
 	timestamps: true
 });

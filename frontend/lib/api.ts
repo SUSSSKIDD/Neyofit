@@ -12,6 +12,7 @@ export const createDefaultTimeSlot = (name: string = "Morning"): TimeSlot => ({
   startTime: "09:00",
   endTime: "21:00",
   isActive: true,
+  isOvernight: false,
 });
 
 // Utility function to create default day schedule
@@ -153,6 +154,7 @@ export interface TimeSlot {
   startTime: string;
   endTime: string;
   isActive: boolean;
+  isOvernight?: boolean;
 }
 
 export interface DaySchedule {
@@ -214,6 +216,7 @@ export interface SubscriptionListing {
   features?: string[];
   startDate?: string;
   endDate?: string;
+  pictureId?: string;
 }
 
 export interface GymSlotData {
@@ -1427,7 +1430,8 @@ class ApiService {
     gymId: string,
     files: File[],
     captions?: string[],
-    isCover?: boolean[]
+    isCover?: boolean[],
+    planIds?: (string | null)[]
   ): Promise<ApiResponse<GymPictureUploadResult>> {
     const formData = new FormData();
     formData.append("gymId", gymId);
@@ -1442,6 +1446,10 @@ class ApiService {
 
     if (isCover) {
       formData.append("isCover", JSON.stringify(isCover));
+    }
+
+    if (planIds) {
+      formData.append("planIds", JSON.stringify(planIds));
     }
 
     const response = await fetch(`${this.baseURL}/gym-pictures/bulk`, {
@@ -2000,6 +2008,7 @@ class ApiService {
     features?: string[];
     startDate?: string;
     endDate?: string;
+    pictureId?: string;
   }): Promise<ApiResponse<SubscriptionListing>> {
     return this.request<SubscriptionListing>(`/subscription-listings`, {
       method: "POST",

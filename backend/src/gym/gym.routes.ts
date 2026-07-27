@@ -404,7 +404,7 @@ router.get("/search/nearby", findGymsNearby);
  * @returns {Array<ISubscriptionListing>} 200 - List of subscription listings
  * @example /gyms/64e9c2f1a1b2c3d4e5f6a7b8/subscription-listings
  */
-router.get(":id/subscription-listings", getGymSubscriptionListings);
+router.get("/:id/subscription-listings", authMiddleware, getGymSubscriptionListings);
 
 /**
  * @route PATCH /gyms/:id/subscription-listings
@@ -415,7 +415,7 @@ router.get(":id/subscription-listings", getGymSubscriptionListings);
  *   "subscriptionListingId": "64e9c2f1a1b2c3d4e5f6a7b9"
  * }
  */
-router.patch(":id/subscription-listings", addGymSubscriptionListing);
+router.patch("/:id/subscription-listings", authMiddleware, authorizeGymManagement, addGymSubscriptionListing);
 
 /**
  * @route POST /gyms/:id/facilities
@@ -426,7 +426,7 @@ router.patch(":id/subscription-listings", addGymSubscriptionListing);
  *   "facilityId": "<facilityObjectId>"
  * }
  */
-router.patch("/:id/facilities", addGymFacility);
+router.patch("/:id/facilities", authMiddleware, authorizeGymManagement, addGymFacility);
 
 /**
  * @route DELETE /gyms/:id/facilities
@@ -437,7 +437,7 @@ router.patch("/:id/facilities", addGymFacility);
  *   "facilityId": "<facilityObjectId>"
  * }
  */
-router.delete("/:id/facilities", removeGymFacility);
+router.delete("/:id/facilities", authMiddleware, authorizeGymManagement, removeGymFacility);
 
 /**
  * @swagger
